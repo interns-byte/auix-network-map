@@ -7,6 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from streamlit_plotly_events import plotly_events
+from streamlit_javascript import st_javascript
 
 st.set_page_config(page_title="AUiX Network Map", layout="wide")
 
@@ -296,6 +297,132 @@ def build_figure(
     return figure
 
 
+
+def build_mobile_figure(
+    data: pd.DataFrame,
+    expanded_category: str | None,
+    selected_organization: str | None,
+) -> go.Figure:
+    """Focused phone layout: one category at a time with readable, evenly spaced nodes."""
+    figure = go.Figure()
+
+    # AUiX stays at the top. The selected category sits below it.
+    center_x, center_y = 0.0, 4.8
+    category_x, category_y = 0.0, 0.8
+
+    add_node(
+        figure,
+        x=center_x,
+        y=center_y,
+        label="AUiX",
+        color="#f4c542",
+        size=105,
+        node_type="center",
+        category="AUiX",
+        name="AUiX",
+        hover="<b>AUiX</b><br>Tap to close the selected category",
+        font_size=28,
+    )
+
+    if expanded_category:
+        style = CATEGORY_STYLE[expanded_category]
+        add_edge(figure, center_x, center_y - 0.6, category_x, category_y + 0.8, width=3.0)
+        add_node(
+            figure,
+            x=category_x,
+            y=category_y,
+            label=style["label"],
+            color=style["color"],
+            size=125,
+            node_type="category",
+            category=expanded_category,
+            name=expanded_category,
+            hover=f"<b>{expanded_category}</b><br>Tap to close",
+            font_size=18,
+        )
+
+        subset = (
+            data[data["type"] == expanded_category]
+            .sort_values(["engagement", "name"], ascending=[False, True])
+            .reset_index(drop=True)
+        )
+        count = len(subset)
+        if count:
+            # Full-circle equal spacing. Radius grows with node count, but stays phone-friendly.
+            radius = max(3.4, min(5.8, 2.55 + count * 0.21))
+            maximum = max(float(subset["engagement"].max()), 1.0)
+            positions = []
+            for index in range(count):
+                angle = math.radians(90 + index * (360.0 / count))
+                x = category_x + radius * math.cos(angle)
+                y = category_y + radius * math.sin(angle)
+                positions.append((x, y, angle))
+                add_edge(figure, category_x, category_y, x, y, width=1.25)
+
+            for (_, row), (x, y, angle) in zip(subset.iterrows(), positions):
+                engagement = float(row["engagement"])
+                node_size = 27 + 18 * math.sqrt(engagement / maximum)
+                selected = selected_organization == row["name"]
+                cosine = math.cos(angle)
+                sine = math.sin(angle)
+                if cosine > 0.28:
+                    text_position = "middle right"
+                elif cosine < -0.28:
+                    text_position = "middle left"
+                elif sine > 0:
+                    text_position = "top center"
+                else:
+                    text_position = "bottom center"
+
+                figure.add_trace(
+                    go.Scatter(
+                        x=[x],
+                        y=[y],
+                        mode="markers+text",
+                        marker={
+                            "size": node_size,
+                            "color": style["color"],
+                            "line": {
+                                "color": "#ffe66d" if selected else "white",
+                                "width": 4 if selected else 1.5,
+                            },
+                        },
+                        text=[row["name"]],
+                        textposition=text_position,
+                        textfont={"color": "white", "size": 11, "family": "Arial Black"},
+                        customdata=[["organization", expanded_category, row["name"]]],
+                        hovertemplate=(
+                            f"<b>{row['name']}</b><br>"
+                            f"Category: {expanded_category}<br>"
+                            f"Engagements: {engagement:g}<br>"
+                            f"Relationship: {row['relationship']}<br>"
+                            f"Expertise: {row['expertise']}<br>"
+                            "Tap to show or hide details<extra></extra>"
+                        ),
+                        showlegend=False,
+                        cliponaxis=False,
+                    )
+                )
+
+    figure.update_layout(
+        paper_bgcolor="#031630",
+        plot_bgcolor="#031630",
+        margin={"l": 8, "r": 8, "t": 20, "b": 20},
+        xaxis={"visible": False, "range": [-7.5, 7.5], "fixedrange": True},
+        yaxis={
+            "visible": False,
+            "range": [-6.8, 6.8],
+            "scaleanchor": "x",
+            "scaleratio": 1,
+            "fixedrange": True,
+        },
+        hoverlabel={"bgcolor": "#10284b", "font_color": "white", "font_size": 13},
+        showlegend=False,
+        dragmode=False,
+        clickmode="event+select",
+    )
+    return figure
+
 def resolve_clicked_node(figure: go.Figure, clicked_point: dict) -> tuple[str, str, str] | None:
     curve_number = clicked_point.get("curveNumber")
     if curve_number is None or not (0 <= curve_number < len(figure.data)):
@@ -339,6 +466,18 @@ st.markdown(
   .detail-label { color: #aac9f5; font-weight: 700; margin-top: 0.8rem; }
   .detail-value { color: white; font-size: 1rem; }
   .empty-card { color: #c8daf4; line-height: 1.5; }
+  .mobile-title {
+    text-align: center; color: white; font-family: Arial Black, Arial, sans-serif;
+    font-size: 1.55rem; font-weight: 800; margin: 0.2rem 0 0.1rem 0;
+  }
+  .mobile-help { text-align: center; color: #d9e7ff; margin-bottom: 0.65rem; }
+  .mobile-detail { margin-top: 0.35rem !important; margin-bottom: 1rem; }
+  @media (max-width: 820px) {
+    .block-container { padding: 0.25rem 0.35rem 1rem 0.35rem; }
+    .instruction { display: none; }
+    .detail-card { border-radius: 14px; padding: 0.9rem 1rem; }
+    button[kind="secondary"] { min-height: 3rem; font-weight: 700; }
+  }
 </style>
 """,
     unsafe_allow_html=True,
@@ -360,36 +499,24 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-map_column, detail_column = st.columns([4.6, 1.25], gap="medium")
+# Read the browser width so one public URL can automatically switch layouts.
+viewport_width = st_javascript("window.innerWidth")
+try:
+    viewport_width = int(viewport_width or 1200)
+except (TypeError, ValueError):
+    viewport_width = 1200
+is_mobile = viewport_width <= 820
 
-with map_column:
-    figure = build_figure(
-        df,
-        st.session_state.expanded_category,
-        st.session_state.selected_organization,
-    )
-    component_key = (
-        f"network_{st.session_state.expanded_category}_"
-        f"{st.session_state.selected_organization}"
-    )
-    clicked = plotly_events(
-        figure,
-        click_event=True,
-        hover_event=False,
-        select_event=False,
-        override_height=990,
-        key=component_key,
-    )
 
-with detail_column:
-    selected_name = st.session_state.selected_organization
+def render_detail_card(selected_name: str | None, mobile: bool = False) -> None:
     if selected_name:
         matching = df[df["name"] == selected_name]
         if not matching.empty:
             row = matching.iloc[0]
+            extra_class = " mobile-detail" if mobile else ""
             st.markdown(
                 f"""
-<div class="detail-card">
+<div class="detail-card{extra_class}">
   <h2>{row['name']}</h2>
   <div class="detail-label">Category</div>
   <div class="detail-value">{row['type']}</div>
@@ -400,43 +527,131 @@ with detail_column:
   <div class="detail-label">Expertise</div>
   <div class="detail-value">{row['expertise']}</div>
   <div class="detail-label">Close</div>
-  <div class="detail-value">Click the highlighted organization bubble again.</div>
+  <div class="detail-value">Tap the highlighted organization bubble again.</div>
 </div>
 """,
                 unsafe_allow_html=True,
             )
     else:
+        extra_class = " mobile-detail" if mobile else ""
         st.markdown(
-            """
-<div class="detail-card empty-card">
+            f"""
+<div class="detail-card empty-card{extra_class}">
   <h2>Organization details</h2>
-  Open a category, then click an organization bubble. Its engagement, relationship, and expertise will remain here until you click that bubble again.
+  Open a category, then tap an organization bubble. Its engagement, relationship, and expertise will remain here until you tap that bubble again.
 </div>
 """,
             unsafe_allow_html=True,
         )
 
-if clicked:
-    node = resolve_clicked_node(figure, clicked[0])
-    if node:
-        node_type, category, name = node
 
-        if node_type == "center":
-            st.session_state.expanded_category = None
-            st.session_state.selected_organization = None
-            st.rerun()
+if is_mobile:
+    st.markdown(
+        '<div class="mobile-title">2025–2026 AUiX Network Map</div>'
+        '<div class="mobile-help">Choose a category, then tap an organization.</div>',
+        unsafe_allow_html=True,
+    )
 
-        if node_type == "category":
-            if st.session_state.expanded_category == category:
-                st.session_state.expanded_category = None
-            else:
-                st.session_state.expanded_category = category
-            st.session_state.selected_organization = None
-            st.rerun()
-
-        if node_type == "organization":
-            if st.session_state.selected_organization == name:
+    # Two-by-two category controls are much easier to tap on phones than overlapping circles.
+    row1 = st.columns(2, gap="small")
+    row2 = st.columns(2, gap="small")
+    category_buttons = [
+        (row1[0], "Air University", "Air University"),
+        (row1[1], "Academia", "Academia"),
+        (row2[0], "Industry", "Industry"),
+        (row2[1], "MIL & GOV", "MIL & GOV"),
+    ]
+    for column, label, category in category_buttons:
+        with column:
+            active = st.session_state.expanded_category == category
+            if st.button(
+                ("✓ " if active else "") + label,
+                key=f"mobile_category_{category}",
+                use_container_width=True,
+            ):
+                st.session_state.expanded_category = None if active else category
                 st.session_state.selected_organization = None
-            else:
-                st.session_state.selected_organization = name
-            st.rerun()
+                st.rerun()
+
+    mobile_figure = build_mobile_figure(
+        df,
+        st.session_state.expanded_category,
+        st.session_state.selected_organization,
+    )
+    mobile_key = (
+        f"mobile_network_{st.session_state.expanded_category}_"
+        f"{st.session_state.selected_organization}"
+    )
+    clicked = plotly_events(
+        mobile_figure,
+        click_event=True,
+        hover_event=False,
+        select_event=False,
+        override_height=610,
+        key=mobile_key,
+    )
+    render_detail_card(st.session_state.selected_organization, mobile=True)
+
+    if clicked:
+        node = resolve_clicked_node(mobile_figure, clicked[0])
+        if node:
+            node_type, category, name = node
+            if node_type in {"center", "category"}:
+                st.session_state.expanded_category = None
+                st.session_state.selected_organization = None
+                st.rerun()
+            if node_type == "organization":
+                st.session_state.selected_organization = (
+                    None if st.session_state.selected_organization == name else name
+                )
+                st.rerun()
+else:
+    map_column, detail_column = st.columns([4.6, 1.25], gap="medium")
+
+    with map_column:
+        figure = build_figure(
+            df,
+            st.session_state.expanded_category,
+            st.session_state.selected_organization,
+        )
+        component_key = (
+            f"network_{st.session_state.expanded_category}_"
+            f"{st.session_state.selected_organization}"
+        )
+        clicked = plotly_events(
+            figure,
+            click_event=True,
+            hover_event=False,
+            select_event=False,
+            override_height=990,
+            key=component_key,
+        )
+
+    with detail_column:
+        render_detail_card(st.session_state.selected_organization)
+
+    if clicked:
+        node = resolve_clicked_node(figure, clicked[0])
+        if node:
+            node_type, category, name = node
+
+            if node_type == "center":
+                st.session_state.expanded_category = None
+                st.session_state.selected_organization = None
+                st.rerun()
+
+            if node_type == "category":
+                if st.session_state.expanded_category == category:
+                    st.session_state.expanded_category = None
+                else:
+                    st.session_state.expanded_category = category
+                st.session_state.selected_organization = None
+                st.rerun()
+
+            if node_type == "organization":
+                if st.session_state.selected_organization == name:
+                    st.session_state.selected_organization = None
+                else:
+                    st.session_state.selected_organization = name
+                st.rerun()
+
