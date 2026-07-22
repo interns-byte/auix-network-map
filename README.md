@@ -1,7 +1,14 @@
-# AUiX Network Map — Responsive Version
+# AUiX Network Map
 
-This version keeps the existing desktop layout and automatically switches to a phone-friendly focused layout when the browser width is 820 pixels or less.
+Run locally:
 
-## Deploy update
+```bash
+python3 -m pip install -r requirements.txt
+python3 -m streamlit run app.py
+```
 
-Replace the files in the existing GitHub repository with these files, then commit the changes. Streamlit Community Cloud should redeploy automatically.
+## Updating the data
+
+The app reads `Streamlit.xlsx` from the same folder as `app.py`. Changes made to another copy of the spreadsheet do not sync automatically. Replace this file locally, or upload and commit the revised file in GitHub for a deployed app.
+
+A live Google Sheet connection can be added later if automatic updates are preferred.

@@ -1,39 +1,21 @@
 from __future__ import annotations
 
-import math
+import json
 from pathlib import Path
 
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
-from streamlit_plotly_events import plotly_events
-from streamlit_javascript import st_javascript
+import streamlit.components.v1 as components
 
-st.set_page_config(page_title="AUiX Network Map", layout="wide")
+st.set_page_config(page_title="AUiX Network Map", layout="wide", initial_sidebar_state="collapsed")
 
 DATA_FILE = Path(__file__).with_name("Streamlit.xlsx")
 
 CATEGORY_STYLE = {
-    "Air University": {
-        "color": "#e32119",
-        "position": (-8.8, 6.2),
-        "label": "AIR<br>UNIVERSITY",
-    },
-    "Academia": {
-        "color": "#0a55d5",
-        "position": (8.8, 6.2),
-        "label": "ACADEMIA",
-    },
-    "Industry": {
-        "color": "#ff9800",
-        "position": (-8.8, -6.2),
-        "label": "INDUSTRY",
-    },
-    "MIL & GOV": {
-        "color": "#57a52c",
-        "position": (8.8, -6.2),
-        "label": "MIL &amp;<br>GOV",
-    },
+    "Air University": {"color": "#e32119", "label": "AIR UNIVERSITY"},
+    "Academia": {"color": "#0a55d5", "label": "ACADEMIA"},
+    "Industry": {"color": "#ff9800", "label": "INDUSTRY"},
+    "MIL & GOV": {"color": "#57a52c", "label": "MIL & GOV"},
 }
 
 
@@ -72,412 +54,17 @@ def load_data() -> pd.DataFrame:
     data["engagement"] = pd.to_numeric(data["engagement"], errors="coerce").fillna(0)
     data["relationship"] = data["relationship"].fillna("Not provided").astype(str).str.strip()
     data["expertise"] = data["expertise"].fillna("Not provided").astype(str).str.strip()
-    return data
-
-
-def add_edge(
-    figure: go.Figure,
-    x0: float,
-    y0: float,
-    x1: float,
-    y1: float,
-    width: float = 2.0,
-) -> None:
-    figure.add_trace(
-        go.Scatter(
-            x=[x0, x1],
-            y=[y0, y1],
-            mode="lines",
-            line={"color": "rgba(255,255,255,0.72)", "width": width},
-            hoverinfo="skip",
-            showlegend=False,
-        )
-    )
-
-
-def add_node(
-    figure: go.Figure,
-    *,
-    x: float,
-    y: float,
-    label: str,
-    color: str,
-    size: float,
-    node_type: str,
-    category: str,
-    name: str,
-    hover: str,
-    text_position: str = "middle center",
-    font_size: int = 17,
-) -> None:
-    figure.add_trace(
-        go.Scatter(
-            x=[x],
-            y=[y],
-            mode="markers+text",
-            marker={
-                "size": size,
-                "color": color,
-                "line": {"color": "white", "width": 1.8},
-            },
-            text=[label],
-            textposition=text_position,
-            textfont={
-                "color": "white",
-                "size": font_size,
-                "family": "Arial Black",
-            },
-            customdata=[[node_type, category, name]],
-            hovertemplate=hover + "<extra></extra>",
-            showlegend=False,
-            cliponaxis=False,
-        )
-    )
-
-
-def ring_positions(category: str, count: int) -> list[tuple[float, float, str]]:
-    """Place every organization at equal angular intervals around its category hub."""
-    if count <= 0:
-        return []
-
-    cx, cy = CATEGORY_STYLE[category]["position"]
-    radius = max(4.4, count * 0.36)
-
-    # Start at the top and distribute every node evenly around all 360 degrees.
-    start_angle = 90.0
-    results: list[tuple[float, float, str]] = []
-    for index in range(count):
-        angle_deg = start_angle + index * (360.0 / count)
-        angle = math.radians(angle_deg)
-        x = cx + radius * math.cos(angle)
-        y = cy + radius * math.sin(angle)
-
-        cosine = math.cos(angle)
-        sine = math.sin(angle)
-        if cosine > 0.30:
-            text_position = "middle right"
-        elif cosine < -0.30:
-            text_position = "middle left"
-        elif sine > 0:
-            text_position = "top center"
-        else:
-            text_position = "bottom center"
-
-        results.append((x, y, text_position))
-    return results
-
-
-def build_figure(
-    data: pd.DataFrame,
-    expanded_category: str | None,
-    selected_organization: str | None,
-) -> go.Figure:
-    figure = go.Figure()
-
-    # Draw the permanent AUiX-to-category structure first.
-    for category, style in CATEGORY_STYLE.items():
-        cx, cy = style["position"]
-        add_edge(figure, 0, 0, cx, cy, width=3.2)
-
-    # Draw the expanded organization's spokes behind the nodes.
-    subset = pd.DataFrame()
-    positions: list[tuple[float, float, str]] = []
-    if expanded_category:
-        subset = (
-            data[data["type"] == expanded_category]
-            .sort_values(["engagement", "name"], ascending=[False, True])
-            .reset_index(drop=True)
-        )
-        positions = ring_positions(expanded_category, len(subset))
-        cx, cy = CATEGORY_STYLE[expanded_category]["position"]
-        for (_, row), (x, y, _) in zip(subset.iterrows(), positions):
-            line_width = 1.2 + min(float(row["engagement"]), 60.0) / 35.0
-            add_edge(figure, cx, cy, x, y, width=line_width)
-
-    # Center node.
-    add_node(
-        figure,
-        x=0,
-        y=0,
-        label="AUiX",
-        color="#f4c542",
-        size=150,
-        node_type="center",
-        category="AUiX",
-        name="AUiX",
-        hover="<b>AUiX</b><br>Click to collapse the map",
-        font_size=33,
-    )
-
-    # Category hubs. These visible markers themselves are the click targets.
-    for category, style in CATEGORY_STYLE.items():
-        cx, cy = style["position"]
-        instruction = (
-            "Click to hide organizations"
-            if expanded_category == category
-            else "Click to show organizations"
-        )
-        add_node(
-            figure,
-            x=cx,
-            y=cy,
-            label=style["label"],
-            color=style["color"],
-            size=155,
-            node_type="category",
-            category=category,
-            name=category,
-            hover=f"<b>{category}</b><br>{instruction}",
-            font_size=20 if category != "Academia" else 19,
-        )
-
-    # Organization nodes for the one open category.
-    if expanded_category and not subset.empty:
-        maximum = max(float(subset["engagement"].max()), 1.0)
-        for (_, row), (x, y, text_position) in zip(subset.iterrows(), positions):
-            engagement = float(row["engagement"])
-            node_size = 34 + 28 * math.sqrt(engagement / maximum)
-            selected = selected_organization == row["name"]
-            line_width = 4.5 if selected else 1.8
-
-            figure.add_trace(
-                go.Scatter(
-                    x=[x],
-                    y=[y],
-                    mode="markers+text",
-                    marker={
-                        "size": node_size,
-                        "color": CATEGORY_STYLE[expanded_category]["color"],
-                        "line": {
-                            "color": "#ffe66d" if selected else "white",
-                            "width": line_width,
-                        },
-                    },
-                    text=[row["name"]],
-                    textposition=text_position,
-                    textfont={"color": "white", "size": 13, "family": "Arial Black"},
-                    customdata=[["organization", expanded_category, row["name"]]],
-                    hovertemplate=(
-                        f"<b>{row['name']}</b><br>"
-                        f"Category: {expanded_category}<br>"
-                        f"Engagements: {engagement:g}<br>"
-                        f"Relationship: {row['relationship']}<br>"
-                        f"Expertise: {row['expertise']}<br>"
-                        "Click to show or hide details"
-                        "<extra></extra>"
-                    ),
-                    showlegend=False,
-                    cliponaxis=False,
-                )
-            )
-
-    figure.update_layout(
-        title={
-            "text": "2025–2026 AUiX Network Map",
-            "x": 0.5,
-            "xanchor": "center",
-            "font": {"size": 38, "color": "white", "family": "Arial Black"},
-        },
-        paper_bgcolor="#031630",
-        plot_bgcolor="#031630",
-        margin={"l": 25, "r": 25, "t": 90, "b": 30},
-        xaxis={"visible": False, "range": [-15.5, 15.5], "fixedrange": True},
-        yaxis={
-            "visible": False,
-            "range": [-12.5, 12.5],
-            "scaleanchor": "x",
-            "scaleratio": 1,
-            "fixedrange": True,
-        },
-        hoverlabel={"bgcolor": "#10284b", "font_color": "white", "font_size": 14},
-        showlegend=False,
-        dragmode=False,
-        clickmode="event+select",
-    )
-    return figure
-
-
-
-def build_mobile_figure(
-    data: pd.DataFrame,
-    expanded_category: str | None,
-    selected_organization: str | None,
-) -> go.Figure:
-    """Focused phone layout: one category at a time with readable, evenly spaced nodes."""
-    figure = go.Figure()
-
-    # AUiX stays at the top. The selected category sits below it.
-    center_x, center_y = 0.0, 4.8
-    category_x, category_y = 0.0, 0.8
-
-    add_node(
-        figure,
-        x=center_x,
-        y=center_y,
-        label="AUiX",
-        color="#f4c542",
-        size=105,
-        node_type="center",
-        category="AUiX",
-        name="AUiX",
-        hover="<b>AUiX</b><br>Tap to close the selected category",
-        font_size=28,
-    )
-
-    if expanded_category:
-        style = CATEGORY_STYLE[expanded_category]
-        add_edge(figure, center_x, center_y - 0.6, category_x, category_y + 0.8, width=3.0)
-        add_node(
-            figure,
-            x=category_x,
-            y=category_y,
-            label=style["label"],
-            color=style["color"],
-            size=125,
-            node_type="category",
-            category=expanded_category,
-            name=expanded_category,
-            hover=f"<b>{expanded_category}</b><br>Tap to close",
-            font_size=18,
-        )
-
-        subset = (
-            data[data["type"] == expanded_category]
-            .sort_values(["engagement", "name"], ascending=[False, True])
-            .reset_index(drop=True)
-        )
-        count = len(subset)
-        if count:
-            # Full-circle equal spacing. Radius grows with node count, but stays phone-friendly.
-            radius = max(3.4, min(5.8, 2.55 + count * 0.21))
-            maximum = max(float(subset["engagement"].max()), 1.0)
-            positions = []
-            for index in range(count):
-                angle = math.radians(90 + index * (360.0 / count))
-                x = category_x + radius * math.cos(angle)
-                y = category_y + radius * math.sin(angle)
-                positions.append((x, y, angle))
-                add_edge(figure, category_x, category_y, x, y, width=1.25)
-
-            for (_, row), (x, y, angle) in zip(subset.iterrows(), positions):
-                engagement = float(row["engagement"])
-                node_size = 27 + 18 * math.sqrt(engagement / maximum)
-                selected = selected_organization == row["name"]
-                cosine = math.cos(angle)
-                sine = math.sin(angle)
-                if cosine > 0.28:
-                    text_position = "middle right"
-                elif cosine < -0.28:
-                    text_position = "middle left"
-                elif sine > 0:
-                    text_position = "top center"
-                else:
-                    text_position = "bottom center"
-
-                figure.add_trace(
-                    go.Scatter(
-                        x=[x],
-                        y=[y],
-                        mode="markers+text",
-                        marker={
-                            "size": node_size,
-                            "color": style["color"],
-                            "line": {
-                                "color": "#ffe66d" if selected else "white",
-                                "width": 4 if selected else 1.5,
-                            },
-                        },
-                        text=[row["name"]],
-                        textposition=text_position,
-                        textfont={"color": "white", "size": 11, "family": "Arial Black"},
-                        customdata=[["organization", expanded_category, row["name"]]],
-                        hovertemplate=(
-                            f"<b>{row['name']}</b><br>"
-                            f"Category: {expanded_category}<br>"
-                            f"Engagements: {engagement:g}<br>"
-                            f"Relationship: {row['relationship']}<br>"
-                            f"Expertise: {row['expertise']}<br>"
-                            "Tap to show or hide details<extra></extra>"
-                        ),
-                        showlegend=False,
-                        cliponaxis=False,
-                    )
-                )
-
-    figure.update_layout(
-        paper_bgcolor="#031630",
-        plot_bgcolor="#031630",
-        margin={"l": 8, "r": 8, "t": 20, "b": 20},
-        xaxis={"visible": False, "range": [-7.5, 7.5], "fixedrange": True},
-        yaxis={
-            "visible": False,
-            "range": [-6.8, 6.8],
-            "scaleanchor": "x",
-            "scaleratio": 1,
-            "fixedrange": True,
-        },
-        hoverlabel={"bgcolor": "#10284b", "font_color": "white", "font_size": 13},
-        showlegend=False,
-        dragmode=False,
-        clickmode="event+select",
-    )
-    return figure
-
-def resolve_clicked_node(figure: go.Figure, clicked_point: dict) -> tuple[str, str, str] | None:
-    curve_number = clicked_point.get("curveNumber")
-    if curve_number is None or not (0 <= curve_number < len(figure.data)):
-        return None
-
-    trace = figure.data[curve_number]
-    customdata = getattr(trace, "customdata", None)
-    if customdata is None or len(customdata) == 0:
-        return None
-
-    values = list(customdata[0])
-    if len(values) < 3:
-        return None
-    return str(values[0]), str(values[1]), str(values[2])
+    return data[data["type"].isin(CATEGORY_STYLE)].copy()
 
 
 st.markdown(
     """
 <style>
-  .stApp {
-    background: radial-gradient(circle at center, #0b2a52 0%, #031630 62%, #020d1f 100%);
-  }
-  header[data-testid="stHeader"] { background: transparent; }
-  .block-container { padding-top: 0.25rem; max-width: 2000px; }
-  .instruction {
-    text-align: center;
-    color: #d9e7ff;
-    font-size: 1rem;
-    margin-bottom: -0.2rem;
-  }
-  .detail-card {
-    background: rgba(10, 36, 72, 0.94);
-    border: 1px solid rgba(255,255,255,0.35);
-    border-radius: 18px;
-    padding: 1.15rem 1.25rem;
-    color: white;
-    margin-top: 5rem;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.30);
-  }
-  .detail-card h2 { margin: 0 0 1rem 0; font-size: 1.55rem; }
-  .detail-label { color: #aac9f5; font-weight: 700; margin-top: 0.8rem; }
-  .detail-value { color: white; font-size: 1rem; }
-  .empty-card { color: #c8daf4; line-height: 1.5; }
-  .mobile-title {
-    text-align: center; color: white; font-family: Arial Black, Arial, sans-serif;
-    font-size: 1.55rem; font-weight: 800; margin: 0.2rem 0 0.1rem 0;
-  }
-  .mobile-help { text-align: center; color: #d9e7ff; margin-bottom: 0.65rem; }
-  .mobile-detail { margin-top: 0.35rem !important; margin-bottom: 1rem; }
-  @media (max-width: 820px) {
-    .block-container { padding: 0.25rem 0.35rem 1rem 0.35rem; }
-    .instruction { display: none; }
-    .detail-card { border-radius: 14px; padding: 0.9rem 1rem; }
-    button[kind="secondary"] { min-height: 3rem; font-weight: 700; }
-  }
+html, body, [data-testid="stAppViewContainer"], .stApp { background:#031630 !important; }
+header[data-testid="stHeader"] { display:none; }
+[data-testid="stToolbar"] { display:none; }
+.block-container { padding:0 !important; max-width:none !important; }
+iframe { display:block; width:100%; border:0; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -489,169 +76,260 @@ except Exception as exc:
     st.error(f"The spreadsheet could not be loaded: {exc}")
     st.stop()
 
-if "expanded_category" not in st.session_state:
-    st.session_state.expanded_category = None
-if "selected_organization" not in st.session_state:
-    st.session_state.selected_organization = None
+records = []
+for row in df.to_dict(orient="records"):
+    records.append(
+        {
+            "name": str(row["name"]),
+            "type": str(row["type"]),
+            "engagement": float(row["engagement"]),
+            "relationship": str(row["relationship"]),
+            "expertise": str(row["expertise"]),
+        }
+    )
 
-st.markdown(
-    '<div class="instruction">Click a category circle to open it. Opening another category closes the first. Click an organization once to pin its details, and click it again to hide them.</div>',
-    unsafe_allow_html=True,
-)
+payload = json.dumps(records, ensure_ascii=False).replace("</", "<\\/")
+styles_payload = json.dumps(CATEGORY_STYLE, ensure_ascii=False).replace("</", "<\\/")
 
-# Read the browser width so one public URL can automatically switch layouts.
-viewport_width = st_javascript("window.innerWidth")
-try:
-    viewport_width = int(viewport_width or 1200)
-except (TypeError, ValueError):
-    viewport_width = 1200
-is_mobile = viewport_width <= 820
+html = r'''<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<style>
+:root { --bg:#031630; --panel:#0a2448; --line:rgba(255,255,255,.74); --muted:#aac9f5; }
+* { box-sizing:border-box; }
+html, body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); color:white; font-family:Arial, Helvetica, sans-serif; }
+#app { width:100vw; height:100vh; display:grid; grid-template-columns:minmax(0, 1fr) 340px; background:radial-gradient(circle at 42% 42%, #0b2a52 0%, #031630 62%, #020d1f 100%); }
+#mapWrap { min-width:0; height:100vh; position:relative; overflow:hidden; }
+#map { width:100%; height:100%; display:block; }
+#panel { height:100vh; overflow-y:auto; padding:88px 18px 18px; border-left:1px solid rgba(255,255,255,.18); background:rgba(2,13,31,.78); }
+#panelTitle { position:absolute; top:22px; right:18px; width:304px; color:#d8e8ff; font-weight:800; font-size:14px; letter-spacing:.02em; }
+.empty { background:rgba(10,36,72,.94); border:1px solid rgba(255,255,255,.3); border-radius:16px; padding:18px; color:#c8daf4; line-height:1.45; }
+.card { position:relative; background:rgba(10,36,72,.96); border:1px solid rgba(255,255,255,.32); border-radius:16px; padding:17px 42px 17px 18px; margin-bottom:12px; box-shadow:0 8px 28px rgba(0,0,0,.3); }
+.card h3 { margin:0 0 12px; font-size:22px; }
+.close { position:absolute; right:12px; top:10px; width:26px; height:26px; border:0; border-radius:50%; background:white; color:#0a2448; font-weight:900; font-size:16px; cursor:pointer; }
+.label { color:var(--muted); font-weight:800; font-size:13px; margin-top:9px; }
+.value { font-size:15px; margin-top:2px; overflow-wrap:anywhere; }
+#tooltip { position:absolute; z-index:20; min-width:190px; max-width:280px; pointer-events:none; opacity:0; transform:translate(-50%, calc(-100% - 16px)); background:#10284b; border:1px solid rgba(255,255,255,.38); border-radius:10px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,.35); font-size:13px; line-height:1.35; transition:opacity .08s; }
+#tooltip b { font-size:15px; }
+.title { font-weight:900; fill:white; text-anchor:middle; }
+.subtitle { fill:#d9e7ff; text-anchor:middle; font-size:12px; }
+.edge { stroke:var(--line); stroke-linecap:round; }
+.node { cursor:pointer; }
+.node circle { stroke:white; stroke-width:2; transition:filter .12s, stroke-width .12s; }
+.node:hover circle { filter:brightness(1.12); stroke-width:3; }
+.node.selected circle { stroke:#ffe66d; stroke-width:5; }
+.catText, .centerText { fill:white; font-weight:900; text-anchor:middle; dominant-baseline:middle; pointer-events:none; }
+.orgText { fill:white; font-weight:800; font-size:13px; dominant-baseline:middle; pointer-events:none; paint-order:stroke; stroke:#031630; stroke-width:4px; stroke-linejoin:round; }
+.mobileTabs { display:none; }
 
-
-def render_detail_card(selected_name: str | None, mobile: bool = False) -> None:
-    if selected_name:
-        matching = df[df["name"] == selected_name]
-        if not matching.empty:
-            row = matching.iloc[0]
-            extra_class = " mobile-detail" if mobile else ""
-            st.markdown(
-                f"""
-<div class="detail-card{extra_class}">
-  <h2>{row['name']}</h2>
-  <div class="detail-label">Category</div>
-  <div class="detail-value">{row['type']}</div>
-  <div class="detail-label">Engagements</div>
-  <div class="detail-value">{float(row['engagement']):g}</div>
-  <div class="detail-label">Relationship</div>
-  <div class="detail-value">{row['relationship']}</div>
-  <div class="detail-label">Expertise</div>
-  <div class="detail-value">{row['expertise']}</div>
-  <div class="detail-label">Close</div>
-  <div class="detail-value">Tap the highlighted organization bubble again.</div>
+@media (max-width: 700px) {
+  #app { grid-template-columns:1fr; grid-template-rows:100vh; }
+  #mapWrap { height:100vh; }
+  #panel { position:absolute; z-index:30; left:8px; right:8px; bottom:8px; height:auto; max-height:39vh; overflow-y:auto; padding:0; border:0; background:transparent; display:none; }
+  #panel.hasCards { display:block; }
+  #panelTitle { display:none; }
+  .card { margin:0 0 7px; padding:12px 38px 12px 14px; border-radius:13px; }
+  .card h3 { font-size:18px; margin-bottom:7px; }
+  .label { font-size:11px; margin-top:6px; }
+  .value { font-size:13px; }
+  .empty { display:none; }
+  #tooltip { max-width:235px; min-width:170px; font-size:12px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="mapWrap">
+    <svg id="map" role="img" aria-label="Interactive AUiX network map"></svg>
+    <div id="tooltip"></div>
+  </div>
+  <aside id="panel">
+    <div id="panelTitle">Pinned organization details</div>
+    <div id="cards"></div>
+  </aside>
 </div>
-""",
-                unsafe_allow_html=True,
-            )
-    else:
-        extra_class = " mobile-detail" if mobile else ""
-        st.markdown(
-            f"""
-<div class="detail-card empty-card{extra_class}">
-  <h2>Organization details</h2>
-  Open a category, then tap an organization bubble. Its engagement, relationship, and expertise will remain here until you tap that bubble again.
-</div>
-""",
-            unsafe_allow_html=True,
-        )
+<script>
+const DATA = __DATA__;
+const STYLES = __STYLES__;
+const categories = ["Air University", "Academia", "Industry", "MIL & GOV"];
+const svg = document.getElementById('map');
+const wrap = document.getElementById('mapWrap');
+const tooltip = document.getElementById('tooltip');
+const cards = document.getElementById('cards');
+const panel = document.getElementById('panel');
+let expanded = null;
+let pinned = [];
+let touchTipTimer = null;
 
+function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function isMobile() { return window.matchMedia('(max-width: 700px)').matches; }
+function make(tag, attrs={}) { const el=document.createElementNS('http://www.w3.org/2000/svg', tag); Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v)); return el; }
+function line(x1,y1,x2,y2,w=2) { return make('line',{x1,y1,x2,y2,'class':'edge','stroke-width':w}); }
+function text(x,y,value,cls,size,anchor='middle') { const t=make('text',{x,y,'class':cls,'font-size':size,'text-anchor':anchor}); t.textContent=value; return t; }
+function categoryData(cat) { return DATA.filter(d=>d.type===cat).sort((a,b)=>b.engagement-a.engagement || a.name.localeCompare(b.name)); }
 
-if is_mobile:
-    st.markdown(
-        '<div class="mobile-title">2025–2026 AUiX Network Map</div>'
-        '<div class="mobile-help">Choose a category, then tap an organization.</div>',
-        unsafe_allow_html=True,
-    )
+function layout() {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const mobile = isMobile();
+  const titleY = mobile ? 28 : 42;
+  svg.appendChild(text(w/2,titleY,'2025–2026 AUiX Network Map','title',mobile?22:34));
+  svg.appendChild(text(w/2,titleY+(mobile?20:24), mobile ? 'Tap a category, then tap an organization.' : 'Click a category to open it. Hover for details. Click organizations to pin cards.','subtitle',mobile?10:12));
 
-    # Two-by-two category controls are much easier to tap on phones than overlapping circles.
-    row1 = st.columns(2, gap="small")
-    row2 = st.columns(2, gap="small")
-    category_buttons = [
-        (row1[0], "Air University", "Air University"),
-        (row1[1], "Academia", "Academia"),
-        (row2[0], "Industry", "Industry"),
-        (row2[1], "MIL & GOV", "MIL & GOV"),
-    ]
-    for column, label, category in category_buttons:
-        with column:
-            active = st.session_state.expanded_category == category
-            if st.button(
-                ("✓ " if active else "") + label,
-                key=f"mobile_category_{category}",
-                use_container_width=True,
-            ):
-                st.session_state.expanded_category = None if active else category
-                st.session_state.selected_organization = None
-                st.rerun()
+  if (mobile) drawMobile(w,h); else drawDesktop(w,h);
+  renderCards();
+}
 
-    mobile_figure = build_mobile_figure(
-        df,
-        st.session_state.expanded_category,
-        st.session_state.selected_organization,
-    )
-    mobile_key = (
-        f"mobile_network_{st.session_state.expanded_category}_"
-        f"{st.session_state.selected_organization}"
-    )
-    clicked = plotly_events(
-        mobile_figure,
-        click_event=True,
-        hover_event=False,
-        select_event=False,
-        override_height=610,
-        key=mobile_key,
-    )
-    render_detail_card(st.session_state.selected_organization, mobile=True)
+function drawDesktop(w,h) {
+  const panelSafe = 0;
+  const cx=w*0.50, cy=h*0.54;
+  const xGap=Math.min(w*0.31, 390), yGap=Math.min(h*0.29, 250);
+  const pos={
+    'Air University':[cx-xGap,cy-yGap], 'Academia':[cx+xGap,cy-yGap],
+    'Industry':[cx-xGap,cy+yGap], 'MIL & GOV':[cx+xGap,cy+yGap]
+  };
+  // Lower categories need extra room beneath them when their organization ring opens.
+  // Move only the expanded lower hub upward; the normal four-hub view stays unchanged.
+  if(expanded==='Industry' || expanded==='MIL & GOV') {
+    pos[expanded][1] = Math.min(pos[expanded][1], h*0.68);
+  }
+  categories.forEach(cat=>{ const [x,y]=pos[cat]; svg.appendChild(line(cx,cy,x,y,3)); });
+  drawHub(cx,cy,76,'#f4c542','AUiX','center');
+  categories.forEach(cat=>{ const [x,y]=pos[cat]; drawHub(x,y,78,STYLES[cat].color,STYLES[cat].label,'category',cat); });
+  if (expanded) drawOrganizationsDesktop(expanded,pos[expanded][0],pos[expanded][1],w,h);
+}
 
-    if clicked:
-        node = resolve_clicked_node(mobile_figure, clicked[0])
-        if node:
-            node_type, category, name = node
-            if node_type in {"center", "category"}:
-                st.session_state.expanded_category = None
-                st.session_state.selected_organization = None
-                st.rerun()
-            if node_type == "organization":
-                st.session_state.selected_organization = (
-                    None if st.session_state.selected_organization == name else name
-                )
-                st.rerun()
-else:
-    map_column, detail_column = st.columns([4.6, 1.25], gap="medium")
+function drawHub(x,y,r,color,label,type,cat=null) {
+  const g=make('g',{'class':'node','data-type':type});
+  g.appendChild(make('circle',{cx:x,cy:y,r,fill:color}));
+  const parts=label.split(' ');
+  if (label==='AIR UNIVERSITY' || label==='MIL & GOV') {
+    const l1=label==='AIR UNIVERSITY'?'AIR':'MIL &';
+    const l2=label==='AIR UNIVERSITY'?'UNIVERSITY':'GOV';
+    g.appendChild(text(x,y-10,l1,'catText',type==='center'?31:20));
+    g.appendChild(text(x,y+14,l2,'catText',type==='center'?31:20));
+  } else g.appendChild(text(x,y,label,type==='center'?'centerText':'catText',type==='center'?31:20));
+  g.addEventListener('click',()=>{
+    if(type==='center'){ expanded=null; layout(); return; }
+    expanded = expanded===cat ? null : cat; layout();
+  });
+  g.addEventListener('mouseenter',e=>showTip(e, {name:cat||'AUiX', type:cat||'Center', engagement:'', relationship:type==='category'?(expanded===cat?'Click to hide organizations':'Click to show organizations'):'Click to collapse map', expertise:''}));
+  g.addEventListener('mouseleave',hideTip);
+  svg.appendChild(g);
+}
 
-    with map_column:
-        figure = build_figure(
-            df,
-            st.session_state.expanded_category,
-            st.session_state.selected_organization,
-        )
-        component_key = (
-            f"network_{st.session_state.expanded_category}_"
-            f"{st.session_state.selected_organization}"
-        )
-        clicked = plotly_events(
-            figure,
-            click_event=True,
-            hover_event=False,
-            select_event=False,
-            override_height=990,
-            key=component_key,
-        )
+function drawOrganizationsDesktop(cat,hx,hy,w,h) {
+  const items=categoryData(cat), n=items.length;
+  if(!n) return;
 
-    with detail_column:
-        render_detail_card(st.session_state.selected_organization)
+  // Reserve room for labels on every side, then size the ellipse to the space that
+  // actually exists around the selected category. This prevents the lower and left
+  // Industry bubbles from being clipped by the map boundary.
+  const sideLabelRoom = cat==='Industry' ? 165 : 135;
+  const verticalRoom = 58;
+  const maxRx = Math.max(120, Math.min(hx-sideLabelRoom, w-hx-sideLabelRoom));
+  const maxRy = Math.max(105, Math.min(hy-verticalRoom, h-hy-verticalRoom));
 
-    if clicked:
-        node = resolve_clicked_node(figure, clicked[0])
-        if node:
-            node_type, category, name = node
+  let desiredRx=Math.max(175,n*18);
+  let desiredRy=Math.max(135,n*10);
+  if(cat==='Industry') {
+    desiredRx=Math.max(255,n*20);
+    desiredRy=Math.max(145,n*10);
+  }
+  const rx=Math.min(desiredRx, w*0.25, maxRx);
+  const ry=Math.min(desiredRy, h*0.23, maxRy);
 
-            if node_type == "center":
-                st.session_state.expanded_category = None
-                st.session_state.selected_organization = None
-                st.rerun()
+  const max=Math.max(...items.map(d=>d.engagement),1);
+  items.forEach((d,i)=>{
+    const a=-Math.PI/2 + i*(Math.PI*2/n);
+    const x=hx+rx*Math.cos(a), y=hy+ry*Math.sin(a);
+    const r=17+17*Math.sqrt(d.engagement/max);
+    svg.insertBefore(line(hx,hy,x,y,1.2+Math.min(d.engagement,60)/35), svg.querySelector('.node'));
+    drawOrg(d,x,y,r,a,w,h);
+  });
+}
 
-            if node_type == "category":
-                if st.session_state.expanded_category == category:
-                    st.session_state.expanded_category = None
-                else:
-                    st.session_state.expanded_category = category
-                st.session_state.selected_organization = None
-                st.rerun()
+function drawMobile(w,h) {
+  const top=78, margin=12, gap=8;
+  const tabW=(w-margin*2-gap)/2, tabH=54;
+  categories.forEach((cat,i)=>{
+    const col=i%2,row=Math.floor(i/2),x=margin+col*(tabW+gap),y=top+row*(tabH+gap);
+    const g=make('g',{'class':'node'});
+    g.appendChild(make('rect',{x,y,width:tabW,height:tabH,rx:18,fill:STYLES[cat].color,stroke:'white','stroke-width':expanded===cat?4:1.8}));
+    g.appendChild(text(x+tabW/2,y+tabH/2+1,STYLES[cat].label,'catText',cat==='Air University'?15:16));
+    g.addEventListener('click',()=>{expanded=expanded===cat?null:cat; layout();});
+    svg.appendChild(g);
+  });
+  const contentTop=top+2*(tabH+gap)+10;
+  if(!expanded){ svg.appendChild(text(w/2,contentTop+90,'Choose a category above','title',20)); return; }
+  const hx=w/2, hy=contentTop+Math.min(165,(h-contentTop)*0.30);
+  const hubR=58;
+  drawHubMobile(hx,hy,hubR,STYLES[expanded].color,STYLES[expanded].label,expanded);
+  const items=categoryData(expanded), n=items.length, max=Math.max(...items.map(d=>d.engagement),1);
+  const availableBottom = pinned.length ? h*0.57 : h-26;
+  const rx=Math.min(w*0.38,150), ry=Math.min(Math.max(120,n*11), Math.max(120,(availableBottom-hy)*0.72));
+  items.forEach((d,i)=>{
+    const a=-Math.PI/2+i*(Math.PI*2/n), x=hx+rx*Math.cos(a), y=hy+ry*Math.sin(a);
+    const r=15+13*Math.sqrt(d.engagement/max);
+    svg.insertBefore(line(hx,hy,x,y,1.2), svg.querySelector('.node'));
+    drawOrg(d,x,y,r,a,w,h,true);
+  });
+}
 
-            if node_type == "organization":
-                if st.session_state.selected_organization == name:
-                    st.session_state.selected_organization = None
-                else:
-                    st.session_state.selected_organization = name
-                st.rerun()
+function drawHubMobile(x,y,r,color,label,cat){
+  const g=make('g',{'class':'node'}); g.appendChild(make('circle',{cx:x,cy:y,r,fill:color}));
+  const l=label==='AIR UNIVERSITY'?['AIR','UNIVERSITY']:label==='MIL & GOV'?['MIL &','GOV']:[label];
+  l.forEach((s,i)=>g.appendChild(text(x,y+(i-(l.length-1)/2)*18,s,'catText',16)));
+  g.addEventListener('click',()=>{expanded=null;layout();}); svg.appendChild(g);
+}
 
+function drawOrg(d,x,y,r,a,w,h,mobile=false){
+  const g=make('g',{'class':'node orgNode'+(pinned.some(p=>p.name===d.name)?' selected':''),'data-name':d.name});
+  g.appendChild(make('circle',{cx:x,cy:y,r,fill:STYLES[d.type].color}));
+  const cos=Math.cos(a), sin=Math.sin(a); let tx=x,ty=y,anchor='middle';
+  const pad=r+8;
+  if(cos>0.28){tx=x+pad;anchor='start';} else if(cos<-0.28){tx=x-pad;anchor='end';}
+  else if(sin<0){ty=y-pad-4;} else {ty=y+pad+8;}
+  // Keep names inside the visible map region.
+  if(anchor==='start' && tx>w-145){anchor='end';tx=x-pad;}
+  if(anchor==='end' && tx<145){anchor='start';tx=x+pad;}
+  const t=text(tx,ty,d.name,'orgText',mobile?11:13,anchor);
+  g.appendChild(t);
+  g.addEventListener('mouseenter',e=>showTip(e,d));
+  g.addEventListener('mousemove',moveTip);
+  g.addEventListener('mouseleave',hideTip);
+  g.addEventListener('touchstart',e=>{showTipAtNode(g,d); clearTimeout(touchTipTimer); touchTipTimer=setTimeout(hideTip,2300);},{passive:true});
+  g.addEventListener('click',()=>{ pin(d); });
+  svg.appendChild(g);
+}
+
+function tipHtml(d){ return `<b>${esc(d.name)}</b><br>Category: ${esc(d.type)}${d.engagement!==''?`<br>Engagements: ${esc(Number(d.engagement).toLocaleString())}`:''}<br>Relationship: ${esc(d.relationship)}${d.expertise?`<br>Expertise: ${esc(d.expertise)}`:''}`; }
+function showTip(e,d){ tooltip.innerHTML=tipHtml(d); tooltip.style.opacity='1'; moveTip(e); }
+function moveTip(e){ const r=wrap.getBoundingClientRect(); tooltip.style.left=(e.clientX-r.left)+'px'; tooltip.style.top=(e.clientY-r.top)+'px'; }
+function showTipAtNode(g,d){ const c=g.querySelector('circle'); if(!c)return; const p=svg.createSVGPoint(); p.x=parseFloat(c.getAttribute('cx')); p.y=parseFloat(c.getAttribute('cy')); const sp=p.matrixTransform(svg.getScreenCTM()); const r=wrap.getBoundingClientRect(); tooltip.innerHTML=tipHtml(d); tooltip.style.left=(sp.x-r.left)+'px'; tooltip.style.top=(sp.y-r.top)+'px'; tooltip.style.opacity='1'; }
+function hideTip(){ tooltip.style.opacity='0'; }
+
+function pin(d){ if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
+function closePin(name){ pinned=pinned.filter(p=>p.name!==name); renderCards(); updateSelection(); }
+function updateSelection(){ document.querySelectorAll('.orgNode').forEach(g=>g.classList.toggle('selected',pinned.some(p=>p.name===g.dataset.name))); }
+function renderCards(){
+  cards.innerHTML='';
+  if(!pinned.length){ cards.innerHTML='<div class="empty"><b>Organization details</b><br><br>Hover over a bubble for a quick preview. Click a bubble to pin its details here. Pinned cards stay open until you close them with ×.</div>'; panel.classList.remove('hasCards'); return; }
+  panel.classList.add('hasCards');
+  pinned.forEach(d=>{
+    const card=document.createElement('div'); card.className='card';
+    card.innerHTML=`<button class="close" aria-label="Close ${esc(d.name)}">×</button><h3>${esc(d.name)}</h3><div class="label">Category</div><div class="value">${esc(d.type)}</div><div class="label">Engagements</div><div class="value">${esc(Number(d.engagement).toLocaleString())}</div><div class="label">Relationship</div><div class="value">${esc(d.relationship)}</div><div class="label">Expertise</div><div class="value">${esc(d.expertise)}</div>`;
+    card.querySelector('.close').addEventListener('click',()=>closePin(d.name)); cards.appendChild(card);
+  });
+}
+
+let resizeTimer; window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(layout,120);});
+layout();
+</script>
+</body>
+</html>'''.replace('__DATA__', payload).replace('__STYLES__', styles_payload)
+
+components.html(html, height=980, scrolling=False)
