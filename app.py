@@ -134,12 +134,12 @@ html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden
 #mobileContent { display:none; }
 
 @media (max-width: 700px) {
-  html, body { height:100%; min-height:100%; overflow:hidden; }
-  #app { display:block; width:100%; height:100vh; height:100dvh; min-height:0; }
-  #mapWrap { height:100vh; height:100dvh; min-height:0; overflow:hidden; padding:0; }
+  html, body { height:auto; min-height:100%; overflow:visible; }
+  #app { display:block; width:100%; height:auto; min-height:100vh; }
+  #mapWrap { height:auto; min-height:100vh; overflow:visible; padding:0; }
   #map { display:none !important; }
   #panel { display:none !important; }
-  #mobileContent { display:block; position:relative; width:100%; height:100vh; height:100dvh; overflow-y:auto; overflow-x:hidden; margin:0; padding:calc(18px + env(safe-area-inset-top)) 12px calc(90px + env(safe-area-inset-bottom)); touch-action:pan-y; -webkit-overflow-scrolling:touch; background:radial-gradient(circle at 50% 22%, #0b2a52 0%, #031630 68%, #020d1f 100%); }
+  #mobileContent { display:block; position:relative; width:100%; height:auto; min-height:100vh; overflow:visible; margin:0; padding:calc(18px + env(safe-area-inset-top)) 12px calc(130px + env(safe-area-inset-bottom)); touch-action:pan-y; background:radial-gradient(circle at 50% 22%, #0b2a52 0%, #031630 68%, #020d1f 100%); }
   .mobile-header { text-align:center; margin:0 0 14px; }
   .mobile-header h1 { margin:0; font-size:27px; line-height:1.08; font-weight:900; }
   .mobile-header p { margin:7px 0 0; color:#d9e7ff; font-size:13px; }
@@ -289,6 +289,24 @@ function drawOrganizationsDesktop(cat,hx,hy,w,h) {
   });
 }
 
+function setStreamlitHeight() {
+  if (!isMobile()) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const contentHeight = Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight,
+        mobileContent.scrollHeight
+      ) + 24;
+      window.parent.postMessage({
+        isStreamlitMessage: true,
+        type: 'streamlit:setFrameHeight',
+        height: contentHeight
+      }, '*');
+    });
+  });
+}
+
 function renderMobileApp() {
   mobileContent.innerHTML='';
 
@@ -309,7 +327,7 @@ function renderMobileApp() {
       expanded=expanded===cat?null:cat;
       mobileSelected=null;
       renderMobileApp();
-      mobileContent.scrollTo({top:0,behavior:'smooth'});
+      window.scrollTo({top:0,behavior:'smooth'});
     });
     tabs.appendChild(btn);
   });
@@ -320,6 +338,7 @@ function renderMobileApp() {
     help.className='mobile-help';
     help.innerHTML='<b>Choose a category above</b><br><br>All organizations will appear in one scrollable list.';
     mobileContent.appendChild(help);
+    setStreamlitHeight();
     return;
   }
 
@@ -340,11 +359,12 @@ function renderMobileApp() {
     row.addEventListener('click',()=>{
       mobileSelected=d;
       renderMobileApp();
-      mobileContent.scrollTo({top:0,behavior:'smooth'});
+      window.scrollTo({top:0,behavior:'smooth'});
     });
     list.appendChild(row);
   });
   mobileContent.appendChild(list);
+  setStreamlitHeight();
 }
 
 function renderMobileDetail(d){
@@ -381,7 +401,7 @@ function moveTip(e){ const r=wrap.getBoundingClientRect(); tooltip.style.left=(e
 function showTipAtNode(g,d){ const c=g.querySelector('circle'); if(!c)return; const p=svg.createSVGPoint(); p.x=parseFloat(c.getAttribute('cx')); p.y=parseFloat(c.getAttribute('cy')); const sp=p.matrixTransform(svg.getScreenCTM()); const r=wrap.getBoundingClientRect(); tooltip.innerHTML=tipHtml(d); tooltip.style.left=(sp.x-r.left)+'px'; tooltip.style.top=(sp.y-r.top)+'px'; tooltip.style.opacity='1'; }
 function hideTip(){ tooltip.style.opacity='0'; }
 
-function pin(d){ if(isMobile()){ mobileSelected=d; renderMobileApp(); mobileContent.scrollTo({top:0, behavior:'smooth'}); return; } if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
+function pin(d){ if(isMobile()){ mobileSelected=d; renderMobileApp(); window.scrollTo({top:0, behavior:'smooth'}); return; } if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
 function closePin(name){ pinned=pinned.filter(p=>p.name!==name); renderCards(); updateSelection(); }
 function updateSelection(){ document.querySelectorAll('.orgNode').forEach(g=>g.classList.toggle('selected',pinned.some(p=>p.name===g.dataset.name))); }
 function renderCards(){

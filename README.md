@@ -1,15 +1,8 @@
 # AUiX Network Map
 
-Responsive Streamlit stakeholder map.
+This version keeps the approved laptop layout and fixes mobile scrolling by allowing the Streamlit component to grow to the full height of the organization list. All organizations appear on one continuous page.
 
-## Mobile behavior
-
-- All organizations in the selected category appear on one continuous page.
-- There are no Previous/Next controls.
-- Scroll normally to reach every organization.
-- Tap an organization to show its details near the top; close the details with the X.
-
-## Run locally
+Run:
 
 ```bash
 python3 -m pip install -r requirements.txt
