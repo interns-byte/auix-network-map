@@ -134,12 +134,18 @@ html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden
 #mobileContent { display:none; }
 
 @media (max-width: 700px) {
-  html, body { height:auto; min-height:100%; overflow-y:auto; overflow-x:hidden; }
-  #app { display:block; width:100%; height:auto; min-height:100dvh; }
-  #mapWrap { height:auto; min-height:100dvh; overflow:visible; padding-bottom:calc(34px + env(safe-area-inset-bottom)); }
-  #map { position:absolute; top:0; left:0; width:100%; height:196px; }
+  html, body { height:100%; min-height:100%; overflow:hidden; }
+  #app { display:block; width:100%; height:100vh; height:100dvh; min-height:0; }
+  #mapWrap { height:100vh; height:100dvh; min-height:0; overflow:hidden; padding:0; }
+  #map { display:none !important; }
   #panel { display:none !important; }
-  #mobileContent { display:block; position:relative; left:auto; right:auto; top:auto; bottom:auto; height:auto; overflow:visible; margin:202px 10px 0; padding:0 2px calc(70px + env(safe-area-inset-bottom)); touch-action:pan-y; }
+  #mobileContent { display:block; position:relative; width:100%; height:100vh; height:100dvh; overflow-y:auto; overflow-x:hidden; margin:0; padding:calc(18px + env(safe-area-inset-top)) 12px calc(90px + env(safe-area-inset-bottom)); touch-action:pan-y; -webkit-overflow-scrolling:touch; background:radial-gradient(circle at 50% 22%, #0b2a52 0%, #031630 68%, #020d1f 100%); }
+  .mobile-header { text-align:center; margin:0 0 14px; }
+  .mobile-header h1 { margin:0; font-size:27px; line-height:1.08; font-weight:900; }
+  .mobile-header p { margin:7px 0 0; color:#d9e7ff; font-size:13px; }
+  .mobile-tabs { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0 16px; }
+  .mobile-tab { min-height:68px; border:2px solid white; border-radius:20px; color:white; font-weight:900; font-size:18px; padding:8px; cursor:pointer; }
+  .mobile-tab.active { outline:4px solid rgba(255,230,109,.9); outline-offset:1px; }
   .mobile-category-title { text-align:center; font-weight:900; font-size:20px; margin:2px 0 10px; }
   .mobile-detail { position:relative; background:rgba(10,36,72,.98); border:1px solid rgba(255,255,255,.35); border-radius:14px; padding:13px 40px 13px 14px; margin-bottom:10px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
   .mobile-detail h3 { margin:0 0 8px; font-size:18px; }
@@ -197,15 +203,20 @@ function text(x,y,value,cls,size,anchor='middle') { const t=make('text',{x,y,'cl
 function categoryData(cat) { return DATA.filter(d=>d.type===cat).sort((a,b)=>b.engagement-a.engagement || a.name.localeCompare(b.name)); }
 
 function layout() {
-  const w = wrap.clientWidth, h = isMobile() ? 196 : wrap.clientHeight;
+  if (isMobile()) {
+    svg.style.display='none';
+    renderMobileApp();
+    return;
+  }
+  svg.style.display='block';
+  mobileContent.innerHTML='';
+  const w = wrap.clientWidth, h = wrap.clientHeight;
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   while (svg.firstChild) svg.removeChild(svg.firstChild);
-  const mobile = isMobile();
-  const titleY = mobile ? 28 : 42;
-  svg.appendChild(text(w/2,titleY,'2025–2026 AUiX Network Map','title',mobile?22:34));
-  svg.appendChild(text(w/2,titleY+(mobile?20:24), mobile ? 'Tap a category, then tap an organization.' : 'Click a category to open it. Hover for details. Click organizations to pin cards.','subtitle',mobile?10:12));
-
-  if (mobile) drawMobile(w,h); else drawDesktop(w,h);
+  const titleY = 42;
+  svg.appendChild(text(w/2,titleY,'2025–2026 AUiX Network Map','title',34));
+  svg.appendChild(text(w/2,titleY+24,'Click a category to open it. Hover for details. Click organizations to pin cards.','subtitle',12));
+  drawDesktop(w,h);
   renderCards();
 }
 
@@ -278,59 +289,69 @@ function drawOrganizationsDesktop(cat,hx,hy,w,h) {
   });
 }
 
-function drawMobile(w,h) {
+function renderMobileApp() {
   mobileContent.innerHTML='';
-  const top=78, margin=12, gap=8;
-  const tabW=(w-margin*2-gap)/2, tabH=54;
-  categories.forEach((cat,i)=>{
-    const col=i%2,row=Math.floor(i/2),x=margin+col*(tabW+gap),y=top+row*(tabH+gap);
-    const g=make('g',{'class':'node'});
-    g.appendChild(make('rect',{x,y,width:tabW,height:tabH,rx:18,fill:STYLES[cat].color,stroke:'white','stroke-width':expanded===cat?4:1.8}));
-    g.appendChild(text(x+tabW/2,y+tabH/2+1,STYLES[cat].label,'catText',cat==='Air University'?15:16));
-    g.addEventListener('click',()=>{
+
+  const header=document.createElement('div');
+  header.className='mobile-header';
+  header.innerHTML='<h1>2025–2026 AUiX Network Map</h1><p>Choose a category, then tap an organization.</p>';
+  mobileContent.appendChild(header);
+
+  const tabs=document.createElement('div');
+  tabs.className='mobile-tabs';
+  categories.forEach(cat=>{
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='mobile-tab'+(expanded===cat?' active':'');
+    btn.style.background=STYLES[cat].color;
+    btn.textContent=STYLES[cat].label;
+    btn.addEventListener('click',()=>{
       expanded=expanded===cat?null:cat;
       mobileSelected=null;
-      layout();
+      renderMobileApp();
+      mobileContent.scrollTo({top:0,behavior:'smooth'});
     });
-    svg.appendChild(g);
+    tabs.appendChild(btn);
   });
+  mobileContent.appendChild(tabs);
 
   if(!expanded){
-    mobileContent.innerHTML='<div class="mobile-help"><b>Choose a category above</b><br><br>Organizations will appear as a clear list with the bubble directly beside each name.</div>';
+    const help=document.createElement('div');
+    help.className='mobile-help';
+    help.innerHTML='<b>Choose a category above</b><br><br>All organizations will appear in one scrollable list.';
+    mobileContent.appendChild(help);
     return;
   }
 
-  const items=categoryData(expanded);
   const title=document.createElement('div');
   title.className='mobile-category-title';
   title.textContent=STYLES[expanded].label;
   mobileContent.appendChild(title);
 
-  if(mobileSelected){ renderMobileDetail(mobileSelected); }
+  if(mobileSelected) renderMobileDetail(mobileSelected);
 
   const list=document.createElement('div');
   list.className='mobile-org-list';
-  items.forEach(d=>{
+  categoryData(expanded).forEach(d=>{
     const row=document.createElement('button');
     row.type='button';
     row.className='mobile-org-row'+(mobileSelected && mobileSelected.name===d.name?' selected':'');
     row.innerHTML=`<span class="mobile-dot" style="background:${esc(STYLES[d.type].color)}"></span><span class="mobile-name">${esc(d.name)}</span><span class="mobile-engagement">${esc(Number(d.engagement).toLocaleString())}</span>`;
     row.addEventListener('click',()=>{
       mobileSelected=d;
-      drawMobile(wrap.clientWidth,wrap.clientHeight);
-      window.scrollTo({top:0, behavior:'smooth'});
+      renderMobileApp();
+      mobileContent.scrollTo({top:0,behavior:'smooth'});
     });
     list.appendChild(row);
   });
   mobileContent.appendChild(list);
-
 }
 
 function renderMobileDetail(d){
   const detail=document.createElement('div');
   detail.className='mobile-detail';
   detail.innerHTML=`<button class="close" aria-label="Close details">×</button><h3>${esc(d.name)}</h3><div class="mobile-detail-grid"><b>Category</b><span>${esc(d.type)}</span><b>Engagements</b><span>${esc(Number(d.engagement).toLocaleString())}</span><b>Engagement Summary</b><span>${esc(d.summary)}</span><b>Expertise Areas</b><span>${esc(d.expertise)}</span></div>`;
-  detail.querySelector('.close').addEventListener('click',()=>{mobileSelected=null; drawMobile(wrap.clientWidth,wrap.clientHeight);});
+  detail.querySelector('.close').addEventListener('click',()=>{mobileSelected=null; renderMobileApp();});
   mobileContent.appendChild(detail);
 }
 
@@ -360,7 +381,7 @@ function moveTip(e){ const r=wrap.getBoundingClientRect(); tooltip.style.left=(e
 function showTipAtNode(g,d){ const c=g.querySelector('circle'); if(!c)return; const p=svg.createSVGPoint(); p.x=parseFloat(c.getAttribute('cx')); p.y=parseFloat(c.getAttribute('cy')); const sp=p.matrixTransform(svg.getScreenCTM()); const r=wrap.getBoundingClientRect(); tooltip.innerHTML=tipHtml(d); tooltip.style.left=(sp.x-r.left)+'px'; tooltip.style.top=(sp.y-r.top)+'px'; tooltip.style.opacity='1'; }
 function hideTip(){ tooltip.style.opacity='0'; }
 
-function pin(d){ if(isMobile()){ mobileSelected=d; drawMobile(wrap.clientWidth,196); window.scrollTo({top:0, behavior:'smooth'}); return; } if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
+function pin(d){ if(isMobile()){ mobileSelected=d; renderMobileApp(); mobileContent.scrollTo({top:0, behavior:'smooth'}); return; } if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
 function closePin(name){ pinned=pinned.filter(p=>p.name!==name); renderCards(); updateSelection(); }
 function updateSelection(){ document.querySelectorAll('.orgNode').forEach(g=>g.classList.toggle('selected',pinned.some(p=>p.name===g.dataset.name))); }
 function renderCards(){
