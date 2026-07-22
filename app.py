@@ -36,15 +36,23 @@ def load_data() -> pd.DataFrame:
     data = pd.read_excel(DATA_FILE)
     data.columns = [str(column).strip().lower() for column in data.columns]
 
-    if "engagament" in data.columns and "engagement" not in data.columns:
-        data = data.rename(columns={"engagament": "engagement"})
+    aliases = {
+        "engagament": "engagement",
+        "categories": "type",
+        "category": "type",
+        "expertise areas": "expertise",
+        "engagement summary": "summary",
+    }
+    for source, target in aliases.items():
+        if source in data.columns and target not in data.columns:
+            data = data.rename(columns={source: target})
 
     required = {"name", "type", "engagement"}
     missing = required.difference(data.columns)
     if missing:
         raise ValueError(f"Missing required columns: {', '.join(sorted(missing))}")
 
-    for optional in ("relationship", "expertise"):
+    for optional in ("summary", "expertise"):
         if optional not in data.columns:
             data[optional] = "Not provided"
 
@@ -52,7 +60,7 @@ def load_data() -> pd.DataFrame:
     data["name"] = data["name"].astype(str).str.strip()
     data["type"] = data["type"].map(normalize_category)
     data["engagement"] = pd.to_numeric(data["engagement"], errors="coerce").fillna(0)
-    data["relationship"] = data["relationship"].fillna("Not provided").astype(str).str.strip()
+    data["summary"] = data["summary"].fillna("Not provided").astype(str).str.strip()
     data["expertise"] = data["expertise"].fillna("Not provided").astype(str).str.strip()
     return data[data["type"].isin(CATEGORY_STYLE)].copy()
 
@@ -83,7 +91,7 @@ for row in df.to_dict(orient="records"):
             "name": str(row["name"]),
             "type": str(row["type"]),
             "engagement": float(row["engagement"]),
-            "relationship": str(row["relationship"]),
+            "summary": str(row["summary"]),
             "expertise": str(row["expertise"]),
         }
     )
@@ -232,7 +240,7 @@ function drawHub(x,y,r,color,label,type,cat=null) {
     if(type==='center'){ expanded=null; layout(); return; }
     expanded = expanded===cat ? null : cat; layout();
   });
-  g.addEventListener('mouseenter',e=>showTip(e, {name:cat||'AUiX', type:cat||'Center', engagement:'', relationship:type==='category'?(expanded===cat?'Click to hide organizations':'Click to show organizations'):'Click to collapse map', expertise:''}));
+  g.addEventListener('mouseenter',e=>showTip(e, {name:cat||'AUiX', type:cat||'Center', engagement:'', summary:type==='category'?(expanded===cat?'Click to hide organizations':'Click to show organizations'):'Click to collapse map', expertise:''}));
   g.addEventListener('mouseleave',hideTip);
   svg.appendChild(g);
 }
@@ -318,7 +326,7 @@ function drawMobile(w,h) {
 function renderMobileDetail(d){
   const detail=document.createElement('div');
   detail.className='mobile-detail';
-  detail.innerHTML=`<button class="close" aria-label="Close details">×</button><h3>${esc(d.name)}</h3><div class="mobile-detail-grid"><b>Category</b><span>${esc(d.type)}</span><b>Engagements</b><span>${esc(Number(d.engagement).toLocaleString())}</span><b>Relationship</b><span>${esc(d.relationship)}</span><b>Expertise</b><span>${esc(d.expertise)}</span></div>`;
+  detail.innerHTML=`<button class="close" aria-label="Close details">×</button><h3>${esc(d.name)}</h3><div class="mobile-detail-grid"><b>Category</b><span>${esc(d.type)}</span><b>Engagements</b><span>${esc(Number(d.engagement).toLocaleString())}</span><b>Engagement Summary</b><span>${esc(d.summary)}</span><b>Expertise Areas</b><span>${esc(d.expertise)}</span></div>`;
   detail.querySelector('.close').addEventListener('click',()=>{mobileSelected=null; drawMobile(wrap.clientWidth,wrap.clientHeight);});
   mobileContent.appendChild(detail);
 }
@@ -343,7 +351,7 @@ function drawOrg(d,x,y,r,a,w,h,mobile=false){
   svg.appendChild(g);
 }
 
-function tipHtml(d){ return `<b>${esc(d.name)}</b><br>Category: ${esc(d.type)}${d.engagement!==''?`<br>Engagements: ${esc(Number(d.engagement).toLocaleString())}`:''}<br>Relationship: ${esc(d.relationship)}${d.expertise?`<br>Expertise: ${esc(d.expertise)}`:''}`; }
+function tipHtml(d){ return `<b>${esc(d.name)}</b><br>Category: ${esc(d.type)}${d.engagement!==''?`<br>Engagements: ${esc(Number(d.engagement).toLocaleString())}`:''}<br>Engagement Summary: ${esc(d.summary)}${d.expertise?`<br>Expertise Areas: ${esc(d.expertise)}`:''}`; }
 function showTip(e,d){ tooltip.innerHTML=tipHtml(d); tooltip.style.opacity='1'; moveTip(e); }
 function moveTip(e){ const r=wrap.getBoundingClientRect(); tooltip.style.left=(e.clientX-r.left)+'px'; tooltip.style.top=(e.clientY-r.top)+'px'; }
 function showTipAtNode(g,d){ const c=g.querySelector('circle'); if(!c)return; const p=svg.createSVGPoint(); p.x=parseFloat(c.getAttribute('cx')); p.y=parseFloat(c.getAttribute('cy')); const sp=p.matrixTransform(svg.getScreenCTM()); const r=wrap.getBoundingClientRect(); tooltip.innerHTML=tipHtml(d); tooltip.style.left=(sp.x-r.left)+'px'; tooltip.style.top=(sp.y-r.top)+'px'; tooltip.style.opacity='1'; }
@@ -359,7 +367,7 @@ function renderCards(){
   panel.classList.add('hasCards');
   pinned.forEach(d=>{
     const card=document.createElement('div'); card.className='card';
-    card.innerHTML=`<button class="close" aria-label="Close ${esc(d.name)}">×</button><h3>${esc(d.name)}</h3><div class="label">Category</div><div class="value">${esc(d.type)}</div><div class="label">Engagements</div><div class="value">${esc(Number(d.engagement).toLocaleString())}</div><div class="label">Relationship</div><div class="value">${esc(d.relationship)}</div><div class="label">Expertise</div><div class="value">${esc(d.expertise)}</div>`;
+    card.innerHTML=`<button class="close" aria-label="Close ${esc(d.name)}">×</button><h3>${esc(d.name)}</h3><div class="label">Category</div><div class="value">${esc(d.type)}</div><div class="label">Engagements</div><div class="value">${esc(Number(d.engagement).toLocaleString())}</div><div class="label">Engagement Summary</div><div class="value">${esc(d.summary)}</div><div class="label">Expertise Areas</div><div class="value">${esc(d.expertise)}</div>`;
     card.querySelector('.close').addEventListener('click',()=>closePin(d.name)); cards.appendChild(card);
   });
 }
