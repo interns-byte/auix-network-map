@@ -123,12 +123,25 @@ html, body { margin:0; width:100%; height:100%; overflow:hidden; background:var(
 .catText, .centerText { fill:white; font-weight:900; text-anchor:middle; dominant-baseline:middle; pointer-events:none; }
 .orgText { fill:white; font-weight:800; font-size:13px; dominant-baseline:middle; pointer-events:none; paint-order:stroke; stroke:#031630; stroke-width:4px; stroke-linejoin:round; }
 .mobileTabs { display:none; }
+#mobileContent { display:none; }
 
 @media (max-width: 700px) {
   #app { grid-template-columns:1fr; grid-template-rows:100vh; }
   #mapWrap { height:100vh; }
-  #panel { position:absolute; z-index:30; left:8px; right:8px; bottom:8px; height:auto; max-height:39vh; overflow-y:auto; padding:0; border:0; background:transparent; display:none; }
-  #panel.hasCards { display:block; }
+  #panel { display:none !important; }
+  #mobileContent { display:block; position:absolute; left:10px; right:10px; top:202px; bottom:10px; overflow-y:auto; padding:0 2px 10px; }
+  .mobile-category-title { text-align:center; font-weight:900; font-size:20px; margin:2px 0 10px; }
+  .mobile-detail { position:relative; background:rgba(10,36,72,.98); border:1px solid rgba(255,255,255,.35); border-radius:14px; padding:13px 40px 13px 14px; margin-bottom:10px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
+  .mobile-detail h3 { margin:0 0 8px; font-size:18px; }
+  .mobile-detail-grid { display:grid; grid-template-columns:92px 1fr; gap:5px 8px; font-size:13px; line-height:1.3; }
+  .mobile-detail-grid b { color:var(--muted); }
+  .mobile-org-list { display:flex; flex-direction:column; gap:8px; }
+  .mobile-org-row { width:100%; display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:10px; border:1px solid rgba(255,255,255,.24); border-radius:14px; padding:10px 12px; background:rgba(7,29,58,.94); color:white; text-align:left; cursor:pointer; }
+  .mobile-org-row:active, .mobile-org-row.selected { border-color:#ffe66d; box-shadow:0 0 0 2px rgba(255,230,109,.25); }
+  .mobile-dot { width:34px; height:34px; border-radius:50%; border:2px solid white; }
+  .mobile-name { font-weight:800; font-size:15px; overflow-wrap:anywhere; }
+  .mobile-engagement { min-width:34px; padding:5px 8px; border-radius:999px; background:rgba(255,255,255,.13); font-weight:800; text-align:center; font-size:12px; }
+  .mobile-help { text-align:center; color:#d9e7ff; font-size:13px; padding:35px 15px; }
   #panelTitle { display:none; }
   .card { margin:0 0 7px; padding:12px 38px 12px 14px; border-radius:13px; }
   .card h3 { font-size:18px; margin-bottom:7px; }
@@ -144,6 +157,7 @@ html, body { margin:0; width:100%; height:100%; overflow:hidden; background:var(
   <div id="mapWrap">
     <svg id="map" role="img" aria-label="Interactive AUiX network map"></svg>
     <div id="tooltip"></div>
+    <div id="mobileContent"></div>
   </div>
   <aside id="panel">
     <div id="panelTitle">Pinned organization details</div>
@@ -162,6 +176,8 @@ const panel = document.getElementById('panel');
 let expanded = null;
 let pinned = [];
 let touchTipTimer = null;
+let mobileSelected = null;
+const mobileContent = document.getElementById('mobileContent');
 
 function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function isMobile() { return window.matchMedia('(max-width: 700px)').matches; }
@@ -253,6 +269,7 @@ function drawOrganizationsDesktop(cat,hx,hy,w,h) {
 }
 
 function drawMobile(w,h) {
+  mobileContent.innerHTML='';
   const top=78, margin=12, gap=8;
   const tabW=(w-margin*2-gap)/2, tabH=54;
   categories.forEach((cat,i)=>{
@@ -260,30 +277,50 @@ function drawMobile(w,h) {
     const g=make('g',{'class':'node'});
     g.appendChild(make('rect',{x,y,width:tabW,height:tabH,rx:18,fill:STYLES[cat].color,stroke:'white','stroke-width':expanded===cat?4:1.8}));
     g.appendChild(text(x+tabW/2,y+tabH/2+1,STYLES[cat].label,'catText',cat==='Air University'?15:16));
-    g.addEventListener('click',()=>{expanded=expanded===cat?null:cat; layout();});
+    g.addEventListener('click',()=>{
+      expanded=expanded===cat?null:cat;
+      mobileSelected=null;
+      layout();
+    });
     svg.appendChild(g);
   });
-  const contentTop=top+2*(tabH+gap)+10;
-  if(!expanded){ svg.appendChild(text(w/2,contentTop+90,'Choose a category above','title',20)); return; }
-  const hx=w/2, hy=contentTop+Math.min(165,(h-contentTop)*0.30);
-  const hubR=58;
-  drawHubMobile(hx,hy,hubR,STYLES[expanded].color,STYLES[expanded].label,expanded);
-  const items=categoryData(expanded), n=items.length, max=Math.max(...items.map(d=>d.engagement),1);
-  const availableBottom = pinned.length ? h*0.57 : h-26;
-  const rx=Math.min(w*0.38,150), ry=Math.min(Math.max(120,n*11), Math.max(120,(availableBottom-hy)*0.72));
-  items.forEach((d,i)=>{
-    const a=-Math.PI/2+i*(Math.PI*2/n), x=hx+rx*Math.cos(a), y=hy+ry*Math.sin(a);
-    const r=15+13*Math.sqrt(d.engagement/max);
-    svg.insertBefore(line(hx,hy,x,y,1.2), svg.querySelector('.node'));
-    drawOrg(d,x,y,r,a,w,h,true);
+
+  if(!expanded){
+    mobileContent.innerHTML='<div class="mobile-help"><b>Choose a category above</b><br><br>Organizations will appear as a clear list with the bubble directly beside each name.</div>';
+    return;
+  }
+
+  const items=categoryData(expanded);
+  const title=document.createElement('div');
+  title.className='mobile-category-title';
+  title.textContent=STYLES[expanded].label;
+  mobileContent.appendChild(title);
+
+  if(mobileSelected){ renderMobileDetail(mobileSelected); }
+
+  const list=document.createElement('div');
+  list.className='mobile-org-list';
+  items.forEach(d=>{
+    const row=document.createElement('button');
+    row.type='button';
+    row.className='mobile-org-row'+(mobileSelected && mobileSelected.name===d.name?' selected':'');
+    row.innerHTML=`<span class="mobile-dot" style="background:${esc(STYLES[d.type].color)}"></span><span class="mobile-name">${esc(d.name)}</span><span class="mobile-engagement">${esc(Number(d.engagement).toLocaleString())}</span>`;
+    row.addEventListener('click',()=>{
+      mobileSelected=d;
+      drawMobile(wrap.clientWidth,wrap.clientHeight);
+      mobileContent.scrollTop=0;
+    });
+    list.appendChild(row);
   });
+  mobileContent.appendChild(list);
 }
 
-function drawHubMobile(x,y,r,color,label,cat){
-  const g=make('g',{'class':'node'}); g.appendChild(make('circle',{cx:x,cy:y,r,fill:color}));
-  const l=label==='AIR UNIVERSITY'?['AIR','UNIVERSITY']:label==='MIL & GOV'?['MIL &','GOV']:[label];
-  l.forEach((s,i)=>g.appendChild(text(x,y+(i-(l.length-1)/2)*18,s,'catText',16)));
-  g.addEventListener('click',()=>{expanded=null;layout();}); svg.appendChild(g);
+function renderMobileDetail(d){
+  const detail=document.createElement('div');
+  detail.className='mobile-detail';
+  detail.innerHTML=`<button class="close" aria-label="Close details">×</button><h3>${esc(d.name)}</h3><div class="mobile-detail-grid"><b>Category</b><span>${esc(d.type)}</span><b>Engagements</b><span>${esc(Number(d.engagement).toLocaleString())}</span><b>Relationship</b><span>${esc(d.relationship)}</span><b>Expertise</b><span>${esc(d.expertise)}</span></div>`;
+  detail.querySelector('.close').addEventListener('click',()=>{mobileSelected=null; drawMobile(wrap.clientWidth,wrap.clientHeight);});
+  mobileContent.appendChild(detail);
 }
 
 function drawOrg(d,x,y,r,a,w,h,mobile=false){
@@ -312,11 +349,12 @@ function moveTip(e){ const r=wrap.getBoundingClientRect(); tooltip.style.left=(e
 function showTipAtNode(g,d){ const c=g.querySelector('circle'); if(!c)return; const p=svg.createSVGPoint(); p.x=parseFloat(c.getAttribute('cx')); p.y=parseFloat(c.getAttribute('cy')); const sp=p.matrixTransform(svg.getScreenCTM()); const r=wrap.getBoundingClientRect(); tooltip.innerHTML=tipHtml(d); tooltip.style.left=(sp.x-r.left)+'px'; tooltip.style.top=(sp.y-r.top)+'px'; tooltip.style.opacity='1'; }
 function hideTip(){ tooltip.style.opacity='0'; }
 
-function pin(d){ if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
+function pin(d){ if(isMobile()){ mobileSelected=d; drawMobile(wrap.clientWidth,wrap.clientHeight); mobileContent.scrollTop=0; return; } if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
 function closePin(name){ pinned=pinned.filter(p=>p.name!==name); renderCards(); updateSelection(); }
 function updateSelection(){ document.querySelectorAll('.orgNode').forEach(g=>g.classList.toggle('selected',pinned.some(p=>p.name===g.dataset.name))); }
 function renderCards(){
   cards.innerHTML='';
+  if(isMobile()){ panel.classList.remove('hasCards'); return; }
   if(!pinned.length){ cards.innerHTML='<div class="empty"><b>Organization details</b><br><br>Hover over a bubble for a quick preview. Click a bubble to pin its details here. Pinned cards stay open until you close them with ×.</div>'; panel.classList.remove('hasCards'); return; }
   panel.classList.add('hasCards');
   pinned.forEach(d=>{
