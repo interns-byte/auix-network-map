@@ -134,16 +134,18 @@ html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden
 #mobileContent { display:none; }
 
 @media (max-width: 700px) {
-  #app { grid-template-columns:1fr; grid-template-rows:100vh; }
-  #mapWrap { height:100vh; height:100dvh; }
+  html, body { height:auto; min-height:100%; overflow-y:auto; overflow-x:hidden; }
+  #app { display:block; width:100%; height:auto; min-height:100dvh; }
+  #mapWrap { height:auto; min-height:100dvh; overflow:visible; padding-bottom:calc(34px + env(safe-area-inset-bottom)); }
+  #map { position:absolute; top:0; left:0; width:100%; height:196px; }
   #panel { display:none !important; }
-  #mobileContent { display:block; position:absolute; left:10px; right:10px; top:202px; bottom:calc(10px + env(safe-area-inset-bottom)); height:calc(100dvh - 212px - env(safe-area-inset-bottom)); overflow-y:scroll; overflow-x:hidden; padding:0 2px calc(90px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling:touch; overscroll-behavior:contain; touch-action:pan-y; scrollbar-gutter:stable; }
+  #mobileContent { display:block; position:relative; left:auto; right:auto; top:auto; bottom:auto; height:auto; overflow:visible; margin:202px 10px 0; padding:0 2px calc(70px + env(safe-area-inset-bottom)); touch-action:pan-y; }
   .mobile-category-title { text-align:center; font-weight:900; font-size:20px; margin:2px 0 10px; }
   .mobile-detail { position:relative; background:rgba(10,36,72,.98); border:1px solid rgba(255,255,255,.35); border-radius:14px; padding:13px 40px 13px 14px; margin-bottom:10px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
   .mobile-detail h3 { margin:0 0 8px; font-size:18px; }
   .mobile-detail-grid { display:grid; grid-template-columns:92px 1fr; gap:5px 8px; font-size:13px; line-height:1.3; }
   .mobile-detail-grid b { color:var(--muted); }
-  .mobile-org-list { display:flex; flex-direction:column; gap:8px; padding-bottom:40px; }
+  .mobile-org-list { display:flex; flex-direction:column; gap:8px; padding-bottom:12px; }
   .mobile-org-row { width:100%; display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:10px; border:1px solid rgba(255,255,255,.24); border-radius:14px; padding:10px 12px; background:rgba(7,29,58,.94); color:white; text-align:left; cursor:pointer; }
   .mobile-org-row:active, .mobile-org-row.selected { border-color:#ffe66d; box-shadow:0 0 0 2px rgba(255,230,109,.25); }
   .mobile-dot { width:34px; height:34px; border-radius:50%; border:2px solid white; }
@@ -195,7 +197,7 @@ function text(x,y,value,cls,size,anchor='middle') { const t=make('text',{x,y,'cl
 function categoryData(cat) { return DATA.filter(d=>d.type===cat).sort((a,b)=>b.engagement-a.engagement || a.name.localeCompare(b.name)); }
 
 function layout() {
-  const w = wrap.clientWidth, h = wrap.clientHeight;
+  const w = wrap.clientWidth, h = isMobile() ? 196 : wrap.clientHeight;
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   while (svg.firstChild) svg.removeChild(svg.firstChild);
   const mobile = isMobile();
@@ -316,11 +318,12 @@ function drawMobile(w,h) {
     row.addEventListener('click',()=>{
       mobileSelected=d;
       drawMobile(wrap.clientWidth,wrap.clientHeight);
-      mobileContent.scrollTop=0;
+      window.scrollTo({top:0, behavior:'smooth'});
     });
     list.appendChild(row);
   });
   mobileContent.appendChild(list);
+
 }
 
 function renderMobileDetail(d){
@@ -357,7 +360,7 @@ function moveTip(e){ const r=wrap.getBoundingClientRect(); tooltip.style.left=(e
 function showTipAtNode(g,d){ const c=g.querySelector('circle'); if(!c)return; const p=svg.createSVGPoint(); p.x=parseFloat(c.getAttribute('cx')); p.y=parseFloat(c.getAttribute('cy')); const sp=p.matrixTransform(svg.getScreenCTM()); const r=wrap.getBoundingClientRect(); tooltip.innerHTML=tipHtml(d); tooltip.style.left=(sp.x-r.left)+'px'; tooltip.style.top=(sp.y-r.top)+'px'; tooltip.style.opacity='1'; }
 function hideTip(){ tooltip.style.opacity='0'; }
 
-function pin(d){ if(isMobile()){ mobileSelected=d; drawMobile(wrap.clientWidth,wrap.clientHeight); mobileContent.scrollTop=0; return; } if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
+function pin(d){ if(isMobile()){ mobileSelected=d; drawMobile(wrap.clientWidth,196); window.scrollTo({top:0, behavior:'smooth'}); return; } if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
 function closePin(name){ pinned=pinned.filter(p=>p.name!==name); renderCards(); updateSelection(); }
 function updateSelection(){ document.querySelectorAll('.orgNode').forEach(g=>g.classList.toggle('selected',pinned.some(p=>p.name===g.dataset.name))); }
 function renderCards(){
@@ -378,4 +381,4 @@ layout();
 </body>
 </html>'''.replace('__DATA__', payload).replace('__STYLES__', styles_payload)
 
-components.html(html, height=980, scrolling=False)
+components.html(html, height=980, scrolling=True)
