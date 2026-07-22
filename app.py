@@ -99,11 +99,11 @@ html = r'''<!doctype html>
 <style>
 :root { --bg:#031630; --panel:#0a2448; --line:rgba(255,255,255,.74); --muted:#aac9f5; }
 * { box-sizing:border-box; }
-html, body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); color:white; font-family:Arial, Helvetica, sans-serif; }
-#app { width:100vw; height:100vh; display:grid; grid-template-columns:minmax(0, 1fr) 340px; background:radial-gradient(circle at 42% 42%, #0b2a52 0%, #031630 62%, #020d1f 100%); }
-#mapWrap { min-width:0; height:100vh; position:relative; overflow:hidden; }
+html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden; background:var(--bg); color:white; font-family:Arial, Helvetica, sans-serif; }
+#app { width:100vw; height:100vh; height:100dvh; display:grid; grid-template-columns:minmax(0, 1fr) 340px; background:radial-gradient(circle at 42% 42%, #0b2a52 0%, #031630 62%, #020d1f 100%); }
+#mapWrap { min-width:0; height:100vh; height:100dvh; position:relative; overflow:hidden; }
 #map { width:100%; height:100%; display:block; }
-#panel { height:100vh; overflow-y:auto; padding:88px 18px 18px; border-left:1px solid rgba(255,255,255,.18); background:rgba(2,13,31,.78); }
+#panel { height:100vh; height:100dvh; overflow-y:auto; padding:88px 18px 18px; border-left:1px solid rgba(255,255,255,.18); background:rgba(2,13,31,.78); }
 #panelTitle { position:absolute; top:22px; right:18px; width:304px; color:#d8e8ff; font-weight:800; font-size:14px; letter-spacing:.02em; }
 .empty { background:rgba(10,36,72,.94); border:1px solid rgba(255,255,255,.3); border-radius:16px; padding:18px; color:#c8daf4; line-height:1.45; }
 .card { position:relative; background:rgba(10,36,72,.96); border:1px solid rgba(255,255,255,.32); border-radius:16px; padding:17px 42px 17px 18px; margin-bottom:12px; box-shadow:0 8px 28px rgba(0,0,0,.3); }
@@ -127,15 +127,15 @@ html, body { margin:0; width:100%; height:100%; overflow:hidden; background:var(
 
 @media (max-width: 700px) {
   #app { grid-template-columns:1fr; grid-template-rows:100vh; }
-  #mapWrap { height:100vh; }
+  #mapWrap { height:100vh; height:100dvh; }
   #panel { display:none !important; }
-  #mobileContent { display:block; position:absolute; left:10px; right:10px; top:202px; bottom:10px; overflow-y:auto; padding:0 2px 10px; }
+  #mobileContent { display:block; position:absolute; left:10px; right:10px; top:202px; bottom:calc(10px + env(safe-area-inset-bottom)); height:calc(100dvh - 212px - env(safe-area-inset-bottom)); overflow-y:scroll; overflow-x:hidden; padding:0 2px calc(90px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling:touch; overscroll-behavior:contain; touch-action:pan-y; scrollbar-gutter:stable; }
   .mobile-category-title { text-align:center; font-weight:900; font-size:20px; margin:2px 0 10px; }
   .mobile-detail { position:relative; background:rgba(10,36,72,.98); border:1px solid rgba(255,255,255,.35); border-radius:14px; padding:13px 40px 13px 14px; margin-bottom:10px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
   .mobile-detail h3 { margin:0 0 8px; font-size:18px; }
   .mobile-detail-grid { display:grid; grid-template-columns:92px 1fr; gap:5px 8px; font-size:13px; line-height:1.3; }
   .mobile-detail-grid b { color:var(--muted); }
-  .mobile-org-list { display:flex; flex-direction:column; gap:8px; }
+  .mobile-org-list { display:flex; flex-direction:column; gap:8px; padding-bottom:40px; }
   .mobile-org-row { width:100%; display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:10px; border:1px solid rgba(255,255,255,.24); border-radius:14px; padding:10px 12px; background:rgba(7,29,58,.94); color:white; text-align:left; cursor:pointer; }
   .mobile-org-row:active, .mobile-org-row.selected { border-color:#ffe66d; box-shadow:0 0 0 2px rgba(255,230,109,.25); }
   .mobile-dot { width:34px; height:34px; border-radius:50%; border:2px solid white; }
