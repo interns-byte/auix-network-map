@@ -140,14 +140,14 @@ html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden
   #map { display:none !important; }
   #panel { display:none !important; }
   #mobileContent { display:block; position:relative; width:100%; height:auto; min-height:100vh; overflow:visible; margin:0; padding:calc(14px + env(safe-area-inset-top)) 10px calc(100px + env(safe-area-inset-bottom)); touch-action:pan-y; background:radial-gradient(circle at 50% 24%, #0b2a52 0%, #031630 68%, #020d1f 100%); }
-  .mobile-header { text-align:center; margin:0 0 10px; }
+  .mobile-header { text-align:center; margin:0 0 6px; }
   .mobile-header h1 { margin:0; font-size:27px; line-height:1.08; font-weight:900; }
-  .mobile-header p { margin:6px 0 0; color:#d9e7ff; font-size:13px; }
-  .mobile-tabs { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:12px 0 8px; }
+  .mobile-header p { display:none; }
+  .mobile-tabs { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:8px 0 0; }
   .mobile-tab { min-height:64px; border:2px solid white; border-radius:19px; color:white; font-weight:900; font-size:18px; line-height:1.05; padding:8px; cursor:pointer; }
   .mobile-tab.active { outline:4px solid rgba(255,230,109,.95); outline-offset:1px; }
-  .mobile-help { text-align:center; color:#d9e7ff; font-size:15px; padding:42px 18px; line-height:1.5; }
-  .mobile-visual { position:relative; width:100%; margin:4px auto 0; }
+  .mobile-help { display:none; }
+  .mobile-visual { position:relative; width:100%; margin:-2px auto 0; }
   .mobile-network-svg { width:100%; height:auto; display:block; overflow:visible; }
   .mobile-link { stroke:rgba(255,255,255,.72); stroke-width:2; }
   .mobile-hub-label { fill:white; font-weight:900; text-anchor:middle; dominant-baseline:middle; font-size:23px; pointer-events:none; }
@@ -308,7 +308,7 @@ function renderMobileApp() {
 
   const header=document.createElement('div');
   header.className='mobile-header';
-  header.innerHTML='<h1>2025–2026 AUiX Network Map</h1><p>Select a category to explore its organizations.</p>';
+  header.innerHTML='<h1>2025–2026 AUiX Network Map</h1>'; 
   mobileContent.appendChild(header);
 
   const tabs=document.createElement('div');
@@ -330,10 +330,6 @@ function renderMobileApp() {
   mobileContent.appendChild(tabs);
 
   if(!expanded){
-    const help=document.createElement('div');
-    help.className='mobile-help';
-    help.innerHTML='<b>Choose a category above.</b><br>The organizations will appear only after you make a selection.';
-    mobileContent.appendChild(help);
     setStreamlitHeight();
     return;
   }
@@ -347,11 +343,11 @@ function renderMobileApp() {
   const NS='http://www.w3.org/2000/svg';
   const graph=document.createElementNS(NS,'svg');
   graph.setAttribute('class','mobile-network-svg');
-  graph.setAttribute('viewBox','0 0 400 620');
+  graph.setAttribute('viewBox','0 0 400 500');
   graph.setAttribute('role','img');
   graph.setAttribute('aria-label',`${STYLES[expanded].label} organizations`);
 
-  const cx=200, cy=235, hubR=83;
+  const cx=200, cy=185, hubR=78;
   const hub=document.createElementNS(NS,'circle');
   hub.setAttribute('cx',cx); hub.setAttribute('cy',cy); hub.setAttribute('r',hubR);
   hub.setAttribute('fill',STYLES[expanded].color); hub.setAttribute('stroke','white'); hub.setAttribute('stroke-width','3');
@@ -372,14 +368,14 @@ function renderMobileApp() {
     let a, radiusX, radiusY;
     if(n<=10){
       a=-Math.PI/2 + i*(Math.PI*2/n);
-      radiusX=142; radiusY=155;
+      radiusX=142; radiusY=132;
     } else if(i<outerCount){
       a=-Math.PI/2 + i*(Math.PI*2/outerCount);
-      radiusX=145; radiusY=160;
+      radiusX=145; radiusY=136;
     } else {
       const innerN=n-outerCount;
       a=-Math.PI/2 + (i-outerCount)*(Math.PI*2/innerN) + Math.PI/innerN;
-      radiusX=112; radiusY=118;
+      radiusX=112; radiusY=104;
     }
     const x=cx+radiusX*Math.cos(a), y=cy+radiusY*Math.sin(a);
     const r=21+10*Math.sqrt(d.engagement/max);
@@ -394,11 +390,11 @@ function renderMobileApp() {
 
     const label=document.createElementNS(NS,'text');
     const onRight=x>=cx;
-    let tx=onRight?x+r+7:x-r-7;
+    let tx=onRight?x+r+8:x-r-8;
     let anchor=onRight?'start':'end';
-    // Keep long names readable and inside the viewBox.
-    if(onRight && tx>326){ tx=x-r-7; anchor='end'; }
-    if(!onRight && tx<74){ tx=x+r+7; anchor='start'; }
+    // Labels always stay beside their bubbles, never above them.
+    if(onRight && tx>322){ tx=x-r-8; anchor='end'; }
+    if(!onRight && tx<78){ tx=x+r+8; anchor='start'; }
     label.setAttribute('x',tx); label.setAttribute('y',y); label.setAttribute('text-anchor',anchor); label.setAttribute('class','mobile-org-label');
     const words=String(d.name).split(' ');
     const lines=[]; let current='';
