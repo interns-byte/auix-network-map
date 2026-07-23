@@ -134,37 +134,34 @@ html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden
 #mobileContent { display:none; }
 
 @media (max-width: 700px) {
-  html, body { height:auto; min-height:100%; overflow:visible; }
-  #app { display:block; width:100%; height:auto; min-height:100vh; }
-  #mapWrap { height:auto; min-height:100vh; overflow:visible; padding:0; }
+  html, body { width:100%; height:100%; min-height:100%; overflow:hidden; }
+  #app { display:block; width:100vw; height:100vh; height:100dvh; overflow:hidden; }
+  #mapWrap { width:100%; height:100vh; height:100dvh; overflow:hidden; padding:0; }
   #map { display:none !important; }
   #panel { display:none !important; }
-  #mobileContent { display:block; position:relative; width:100%; height:auto; min-height:100vh; overflow:visible; margin:0; padding:calc(18px + env(safe-area-inset-top)) 12px calc(130px + env(safe-area-inset-bottom)); touch-action:pan-y; background:radial-gradient(circle at 50% 22%, #0b2a52 0%, #031630 68%, #020d1f 100%); }
-  .mobile-header { text-align:center; margin:0 0 14px; }
-  .mobile-header h1 { margin:0; font-size:27px; line-height:1.08; font-weight:900; }
-  .mobile-header p { margin:7px 0 0; color:#d9e7ff; font-size:13px; }
-  .mobile-tabs { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0 16px; }
-  .mobile-tab { min-height:68px; border:2px solid white; border-radius:20px; color:white; font-weight:900; font-size:18px; padding:8px; cursor:pointer; }
-  .mobile-tab.active { outline:4px solid rgba(255,230,109,.9); outline-offset:1px; }
-  .mobile-category-title { text-align:center; font-weight:900; font-size:20px; margin:2px 0 10px; }
-  .mobile-detail { position:relative; background:rgba(10,36,72,.98); border:1px solid rgba(255,255,255,.35); border-radius:14px; padding:13px 40px 13px 14px; margin-bottom:10px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
+  #mobileContent { display:flex; flex-direction:column; position:relative; width:100%; height:100vh; height:100dvh; overflow:hidden; margin:0; padding:calc(10px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom)); background:radial-gradient(circle at 50% 38%, #0b2a52 0%, #031630 72%, #020d1f 100%); }
+  .mobile-header { text-align:center; flex:0 0 auto; margin:0 0 7px; }
+  .mobile-header h1 { margin:0; font-size:22px; line-height:1.05; font-weight:900; }
+  .mobile-header p { margin:4px 0 0; color:#d9e7ff; font-size:11px; }
+  .mobile-tabs { display:grid; grid-template-columns:1fr 1fr; gap:6px; flex:0 0 auto; margin:5px 0 6px; }
+  .mobile-tab { min-height:43px; border:2px solid white; border-radius:14px; color:white; font-weight:900; font-size:14px; padding:4px 6px; cursor:pointer; line-height:1.05; }
+  .mobile-tab.active { outline:3px solid rgba(255,230,109,.95); outline-offset:1px; }
+  .mobile-map-stage { position:relative; flex:1 1 auto; min-height:0; overflow:hidden; border-radius:18px; }
+  .mobile-network { width:100%; height:100%; display:block; overflow:visible; }
+  .mobile-edge { stroke:rgba(255,255,255,.68); stroke-width:1.35; }
+  .mobile-center-circle { stroke:white; stroke-width:3; }
+  .mobile-center-label { fill:white; font-size:18px; font-weight:900; text-anchor:middle; dominant-baseline:middle; pointer-events:none; }
+  .mobile-org-group { cursor:pointer; }
+  .mobile-org-circle { stroke:white; stroke-width:2; }
+  .mobile-org-group.selected .mobile-org-circle { stroke:#ffe66d; stroke-width:4; }
+  .mobile-org-label { fill:white; font-size:10.5px; font-weight:800; text-anchor:middle; paint-order:stroke; stroke:#031630; stroke-width:3px; stroke-linejoin:round; pointer-events:none; }
+  .mobile-detail { position:absolute; z-index:30; left:8px; right:8px; bottom:8px; max-height:47%; overflow-y:auto; background:rgba(10,36,72,.98); border:1px solid rgba(255,255,255,.38); border-radius:14px; padding:13px 40px 13px 14px; box-shadow:0 10px 30px rgba(0,0,0,.48); }
   .mobile-detail h3 { margin:0 0 8px; font-size:18px; }
-  .mobile-detail-grid { display:grid; grid-template-columns:92px 1fr; gap:5px 8px; font-size:13px; line-height:1.3; }
+  .mobile-detail-grid { display:grid; grid-template-columns:88px 1fr; gap:5px 8px; font-size:12px; line-height:1.28; }
   .mobile-detail-grid b { color:var(--muted); }
-  .mobile-org-list { display:flex; flex-direction:column; gap:8px; padding-bottom:12px; }
-  .mobile-org-row { width:100%; display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:10px; border:1px solid rgba(255,255,255,.24); border-radius:14px; padding:10px 12px; background:rgba(7,29,58,.94); color:white; text-align:left; cursor:pointer; }
-  .mobile-org-row:active, .mobile-org-row.selected { border-color:#ffe66d; box-shadow:0 0 0 2px rgba(255,230,109,.25); }
-  .mobile-dot { width:34px; height:34px; border-radius:50%; border:2px solid white; }
-  .mobile-name { font-weight:800; font-size:15px; overflow-wrap:anywhere; }
-  .mobile-engagement { min-width:34px; padding:5px 8px; border-radius:999px; background:rgba(255,255,255,.13); font-weight:800; text-align:center; font-size:12px; }
-  .mobile-help { text-align:center; color:#d9e7ff; font-size:13px; padding:35px 15px; }
+  .mobile-help { display:flex; align-items:center; justify-content:center; flex:1; text-align:center; color:#d9e7ff; font-size:13px; padding:20px; }
+  #tooltip { display:none !important; }
   #panelTitle { display:none; }
-  .card { margin:0 0 7px; padding:12px 38px 12px 14px; border-radius:13px; }
-  .card h3 { font-size:18px; margin-bottom:7px; }
-  .label { font-size:11px; margin-top:6px; }
-  .value { font-size:13px; }
-  .empty { display:none; }
-  #tooltip { max-width:235px; min-width:170px; font-size:12px; }
 }
 </style>
 </head>
@@ -289,30 +286,12 @@ function drawOrganizationsDesktop(cat,hx,hy,w,h) {
   });
 }
 
-function setStreamlitHeight() {
-  if (!isMobile()) return;
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const contentHeight = Math.max(
-        document.documentElement.scrollHeight,
-        document.body.scrollHeight,
-        mobileContent.scrollHeight
-      ) + 24;
-      window.parent.postMessage({
-        isStreamlitMessage: true,
-        type: 'streamlit:setFrameHeight',
-        height: contentHeight
-      }, '*');
-    });
-  });
-}
-
 function renderMobileApp() {
   mobileContent.innerHTML='';
 
   const header=document.createElement('div');
   header.className='mobile-header';
-  header.innerHTML='<h1>2025–2026 AUiX Network Map</h1><p>Choose a category, then tap an organization.</p>';
+  header.innerHTML='<h1>2025–2026 AUiX Network Map</h1><p>Choose a category, then tap an organization bubble.</p>';
   mobileContent.appendChild(header);
 
   const tabs=document.createElement('div');
@@ -322,12 +301,11 @@ function renderMobileApp() {
     btn.type='button';
     btn.className='mobile-tab'+(expanded===cat?' active':'');
     btn.style.background=STYLES[cat].color;
-    btn.textContent=STYLES[cat].label;
+    btn.innerHTML=STYLES[cat].label==='AIR UNIVERSITY'?'AIR<br>UNIVERSITY':(STYLES[cat].label==='MIL & GOV'?'MIL &amp; GOV':esc(STYLES[cat].label));
     btn.addEventListener('click',()=>{
-      expanded=expanded===cat?null:cat;
+      expanded=cat;
       mobileSelected=null;
       renderMobileApp();
-      window.scrollTo({top:0,behavior:'smooth'});
     });
     tabs.appendChild(btn);
   });
@@ -336,43 +314,101 @@ function renderMobileApp() {
   if(!expanded){
     const help=document.createElement('div');
     help.className='mobile-help';
-    help.innerHTML='<b>Choose a category above</b><br><br>All organizations will appear in one scrollable list.';
+    help.innerHTML='<div><b>Choose a category above</b><br><br>Its organizations will appear as bubbles around the category circle.</div>';
     mobileContent.appendChild(help);
-    setStreamlitHeight();
     return;
   }
 
-  const title=document.createElement('div');
-  title.className='mobile-category-title';
-  title.textContent=STYLES[expanded].label;
-  mobileContent.appendChild(title);
-
-  if(mobileSelected) renderMobileDetail(mobileSelected);
-
-  const list=document.createElement('div');
-  list.className='mobile-org-list';
-  categoryData(expanded).forEach(d=>{
-    const row=document.createElement('button');
-    row.type='button';
-    row.className='mobile-org-row'+(mobileSelected && mobileSelected.name===d.name?' selected':'');
-    row.innerHTML=`<span class="mobile-dot" style="background:${esc(STYLES[d.type].color)}"></span><span class="mobile-name">${esc(d.name)}</span><span class="mobile-engagement">${esc(Number(d.engagement).toLocaleString())}</span>`;
-    row.addEventListener('click',()=>{
-      mobileSelected=d;
-      renderMobileApp();
-      window.scrollTo({top:0,behavior:'smooth'});
-    });
-    list.appendChild(row);
-  });
-  mobileContent.appendChild(list);
-  setStreamlitHeight();
+  const stage=document.createElement('div');
+  stage.className='mobile-map-stage';
+  mobileContent.appendChild(stage);
+  drawMobileNetwork(stage, expanded);
+  if(mobileSelected) renderMobileDetail(mobileSelected, stage);
 }
 
-function renderMobileDetail(d){
+function splitMobileLabel(name){
+  const words=String(name).trim().split(/\s+/);
+  if(name.length<=13 || words.length===1) return [name];
+  let best=1, bestDiff=Infinity;
+  for(let i=1;i<words.length;i++){
+    const a=words.slice(0,i).join(' '), b=words.slice(i).join(' ');
+    const diff=Math.abs(a.length-b.length);
+    if(diff<bestDiff){best=i;bestDiff=diff;}
+  }
+  return [words.slice(0,best).join(' '), words.slice(best).join(' ')];
+}
+
+function drawMobileNetwork(stage, cat){
+  const items=categoryData(cat);
+  const w=Math.max(stage.clientWidth, 320);
+  const h=Math.max(stage.clientHeight, 430);
+  const ns='http://www.w3.org/2000/svg';
+  const msvg=document.createElementNS(ns,'svg');
+  msvg.setAttribute('class','mobile-network');
+  msvg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  stage.appendChild(msvg);
+
+  const cx=w/2, cy=h*0.48;
+  const hubR=Math.min(56, w*0.15);
+  const n=items.length;
+  const outerCount=Math.ceil(n/2);
+  const innerCount=n-outerCount;
+  const maxEng=Math.max(...items.map(d=>d.engagement),1);
+
+  const ring1X=Math.min(w*0.34, 145), ring1Y=Math.min(h*0.29, 150);
+  const ring2X=Math.min(w*0.43, 178), ring2Y=Math.min(h*0.40, 205);
+
+  function addLine(x1,y1,x2,y2){
+    const ln=document.createElementNS(ns,'line');
+    ln.setAttribute('x1',x1);ln.setAttribute('y1',y1);ln.setAttribute('x2',x2);ln.setAttribute('y2',y2);ln.setAttribute('class','mobile-edge');
+    msvg.appendChild(ln);
+  }
+
+  const positions=[];
+  items.forEach((d,i)=>{
+    let ringIndex, idx, count, rx, ry, offset;
+    if(i<outerCount){ ringIndex=0; idx=i; count=outerCount; rx=ring2X; ry=ring2Y; offset=-Math.PI/2; }
+    else { ringIndex=1; idx=i-outerCount; count=innerCount; rx=ring1X; ry=ring1Y; offset=-Math.PI/2 + (innerCount?Math.PI/innerCount:0); }
+    const a=offset + idx*(Math.PI*2/Math.max(count,1));
+    const x=cx+rx*Math.cos(a), y=cy+ry*Math.sin(a);
+    positions.push({d,x,y,a,ringIndex});
+    addLine(cx,cy,x,y);
+  });
+
+  const hub=document.createElementNS(ns,'circle');
+  hub.setAttribute('cx',cx);hub.setAttribute('cy',cy);hub.setAttribute('r',hubR);hub.setAttribute('fill',STYLES[cat].color);hub.setAttribute('class','mobile-center-circle');
+  msvg.appendChild(hub);
+  const hubLines=STYLES[cat].label==='AIR UNIVERSITY'?['AIR','UNIVERSITY']:(STYLES[cat].label==='MIL & GOV'?['MIL &','GOV']:[STYLES[cat].label]);
+  hubLines.forEach((lineText,j)=>{
+    const t=document.createElementNS(ns,'text');
+    t.setAttribute('x',cx);t.setAttribute('y',cy+(j-(hubLines.length-1)/2)*20);t.setAttribute('class','mobile-center-label');t.textContent=lineText;msvg.appendChild(t);
+  });
+
+  positions.forEach(({d,x,y,a,ringIndex})=>{
+    const g=document.createElementNS(ns,'g');
+    g.setAttribute('class','mobile-org-group'+(mobileSelected&&mobileSelected.name===d.name?' selected':''));
+    const r=12+9*Math.sqrt(d.engagement/maxEng);
+    const c=document.createElementNS(ns,'circle');
+    c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r',r);c.setAttribute('fill',STYLES[d.type].color);c.setAttribute('class','mobile-org-circle');
+    g.appendChild(c);
+
+    const lines=splitMobileLabel(d.name);
+    let ly=y+r+13;
+    if(Math.sin(a)<-0.45) ly=y-r-10-(lines.length-1)*11;
+    lines.forEach((lineText,j)=>{
+      const t=document.createElementNS(ns,'text');
+      t.setAttribute('x',x);t.setAttribute('y',ly+j*11);t.setAttribute('class','mobile-org-label');t.textContent=lineText;g.appendChild(t);
+    });
+    g.addEventListener('click',()=>{ mobileSelected=d; renderMobileApp(); });
+    msvg.appendChild(g);
+  });
+}
+function renderMobileDetail(d, container){
   const detail=document.createElement('div');
   detail.className='mobile-detail';
   detail.innerHTML=`<button class="close" aria-label="Close details">×</button><h3>${esc(d.name)}</h3><div class="mobile-detail-grid"><b>Category</b><span>${esc(d.type)}</span><b>Engagements</b><span>${esc(Number(d.engagement).toLocaleString())}</span><b>Engagement Summary</b><span>${esc(d.summary)}</span><b>Expertise Areas</b><span>${esc(d.expertise)}</span></div>`;
   detail.querySelector('.close').addEventListener('click',()=>{mobileSelected=null; renderMobileApp();});
-  mobileContent.appendChild(detail);
+  container.appendChild(detail);
 }
 
 function drawOrg(d,x,y,r,a,w,h,mobile=false){
@@ -431,7 +467,6 @@ window.addEventListener('resize', () => {
 
   if (!crossedBreakpoint && currentMobileMode && !meaningfulWidthChange) {
     // Ignore mobile height-only changes caused by Safari browser chrome.
-    setStreamlitHeight();
     return;
   }
 
@@ -451,4 +486,4 @@ layout();
 </body>
 </html>'''.replace('__DATA__', payload).replace('__STYLES__', styles_payload)
 
-components.html(html, height=980, scrolling=True)
+components.html(html, height=900, scrolling=False)
