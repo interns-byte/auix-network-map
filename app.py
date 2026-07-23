@@ -134,32 +134,33 @@ html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden
 #mobileContent { display:none; }
 
 @media (max-width: 700px) {
-  html, body { width:100%; height:100%; min-height:100%; overflow:hidden; }
-  #app { display:block; width:100vw; height:100vh; height:100dvh; overflow:hidden; }
-  #mapWrap { width:100%; height:100vh; height:100dvh; overflow:hidden; padding:0; }
+  html, body { height:auto; min-height:100%; overflow:visible; }
+  #app { display:block; width:100%; height:auto; min-height:100vh; }
+  #mapWrap { height:auto; min-height:100vh; overflow:visible; padding:0; }
   #map { display:none !important; }
   #panel { display:none !important; }
-  #mobileContent { display:flex; flex-direction:column; position:relative; width:100%; height:100vh; height:100dvh; overflow:hidden; margin:0; padding:calc(10px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom)); background:radial-gradient(circle at 50% 38%, #0b2a52 0%, #031630 72%, #020d1f 100%); }
-  .mobile-header { text-align:center; flex:0 0 auto; margin:0 0 7px; }
-  .mobile-header h1 { margin:0; font-size:22px; line-height:1.05; font-weight:900; }
-  .mobile-tabs { display:grid; grid-template-columns:1fr 1fr; gap:6px; flex:0 0 auto; margin:5px 0 6px; }
-  .mobile-tab { min-height:43px; border:2px solid white; border-radius:14px; color:white; font-weight:900; font-size:14px; padding:4px 6px; cursor:pointer; line-height:1.05; }
-  .mobile-tab.active { outline:3px solid rgba(255,230,109,.95); outline-offset:1px; }
-  .mobile-map-stage { position:relative; flex:1 1 auto; min-height:0; overflow:hidden; border-radius:18px; margin-top:2px; }
-  .mobile-network { width:100%; height:100%; display:block; overflow:visible; }
-  .mobile-edge { stroke:rgba(255,255,255,.68); stroke-width:1.35; }
-  .mobile-center-circle { stroke:white; stroke-width:3; }
-  .mobile-center-label { fill:white; font-size:19px; font-weight:900; text-anchor:middle; dominant-baseline:middle; pointer-events:none; }
-  .mobile-org-group { cursor:pointer; }
-  .mobile-org-circle { stroke:white; stroke-width:2; }
-  .mobile-org-group.selected .mobile-org-circle { stroke:#ffe66d; stroke-width:4; }
-  .mobile-org-label { fill:white; font-size:11px; font-weight:800; text-anchor:middle; paint-order:stroke; stroke:#031630; stroke-width:3px; stroke-linejoin:round; pointer-events:none; }
-  .mobile-detail { position:absolute; z-index:30; left:8px; right:8px; top:8px; bottom:auto; max-height:42%; overflow-y:auto; background:rgba(10,36,72,.98); border:1px solid rgba(255,255,255,.38); border-radius:14px; padding:13px 40px 13px 14px; box-shadow:0 10px 30px rgba(0,0,0,.48); }
-  .mobile-detail h3 { margin:0 0 8px; font-size:18px; }
-  .mobile-detail-grid { display:grid; grid-template-columns:88px 1fr; gap:5px 8px; font-size:12px; line-height:1.28; }
+  #mobileContent { display:block; position:relative; width:100%; height:auto; min-height:100vh; overflow:visible; margin:0; padding:calc(14px + env(safe-area-inset-top)) 10px calc(100px + env(safe-area-inset-bottom)); touch-action:pan-y; background:radial-gradient(circle at 50% 24%, #0b2a52 0%, #031630 68%, #020d1f 100%); }
+  .mobile-header { text-align:center; margin:0 0 10px; }
+  .mobile-header h1 { margin:0; font-size:27px; line-height:1.08; font-weight:900; }
+  .mobile-header p { margin:6px 0 0; color:#d9e7ff; font-size:13px; }
+  .mobile-tabs { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:12px 0 8px; }
+  .mobile-tab { min-height:64px; border:2px solid white; border-radius:19px; color:white; font-weight:900; font-size:18px; line-height:1.05; padding:8px; cursor:pointer; }
+  .mobile-tab.active { outline:4px solid rgba(255,230,109,.95); outline-offset:1px; }
+  .mobile-help { text-align:center; color:#d9e7ff; font-size:15px; padding:42px 18px; line-height:1.5; }
+  .mobile-visual { position:relative; width:100%; margin:4px auto 0; }
+  .mobile-network-svg { width:100%; height:auto; display:block; overflow:visible; }
+  .mobile-link { stroke:rgba(255,255,255,.72); stroke-width:2; }
+  .mobile-hub-label { fill:white; font-weight:900; text-anchor:middle; dominant-baseline:middle; font-size:23px; pointer-events:none; }
+  .mobile-org-label { fill:white; font-weight:800; dominant-baseline:middle; font-size:13px; paint-order:stroke; stroke:#031630; stroke-width:4px; stroke-linejoin:round; pointer-events:none; }
+  .mobile-org-node { cursor:pointer; }
+  .mobile-org-node circle { stroke:white; stroke-width:3; }
+  .mobile-org-node.selected circle { stroke:#ffe66d; stroke-width:6; }
+  .mobile-detail { position:relative; background:rgba(10,36,72,.98); border:1px solid rgba(255,255,255,.38); border-radius:14px; padding:13px 40px 13px 14px; margin:8px 4px 4px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
+  .mobile-detail h3 { margin:0 0 8px; font-size:19px; }
+  .mobile-detail-grid { display:grid; grid-template-columns:96px 1fr; gap:5px 8px; font-size:13px; line-height:1.3; }
   .mobile-detail-grid b { color:var(--muted); }
-  #tooltip { display:none !important; }
   #panelTitle { display:none; }
+  #tooltip { display:none !important; }
 }
 </style>
 </head>
@@ -284,12 +285,30 @@ function drawOrganizationsDesktop(cat,hx,hy,w,h) {
   });
 }
 
+function setStreamlitHeight() {
+  if (!isMobile()) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const contentHeight = Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight,
+        mobileContent.scrollHeight
+      ) + 24;
+      window.parent.postMessage({
+        isStreamlitMessage: true,
+        type: 'streamlit:setFrameHeight',
+        height: contentHeight
+      }, '*');
+    });
+  });
+}
+
 function renderMobileApp() {
   mobileContent.innerHTML='';
 
   const header=document.createElement('div');
   header.className='mobile-header';
-  header.innerHTML='<h1>2025–2026 AUiX Network Map</h1>';
+  header.innerHTML='<h1>2025–2026 AUiX Network Map</h1><p>Select a category to explore its organizations.</p>';
   mobileContent.appendChild(header);
 
   const tabs=document.createElement('div');
@@ -299,126 +318,108 @@ function renderMobileApp() {
     btn.type='button';
     btn.className='mobile-tab'+(expanded===cat?' active':'');
     btn.style.background=STYLES[cat].color;
-    btn.innerHTML=STYLES[cat].label==='AIR UNIVERSITY'?'AIR<br>UNIVERSITY':(STYLES[cat].label==='MIL & GOV'?'MIL &amp; GOV':esc(STYLES[cat].label));
+    btn.innerHTML=STYLES[cat].label==='AIR UNIVERSITY'?'AIR<br>UNIVERSITY':esc(STYLES[cat].label);
     btn.addEventListener('click',()=>{
-      expanded=cat;
+      expanded=expanded===cat?null:cat;
       mobileSelected=null;
       renderMobileApp();
+      window.scrollTo({top:0,behavior:'smooth'});
     });
     tabs.appendChild(btn);
   });
   mobileContent.appendChild(tabs);
 
   if(!expanded){
-    expanded = categories[0];
+    const help=document.createElement('div');
+    help.className='mobile-help';
+    help.innerHTML='<b>Choose a category above.</b><br>The organizations will appear only after you make a selection.';
+    mobileContent.appendChild(help);
+    setStreamlitHeight();
+    return;
   }
 
-  const stage=document.createElement('div');
-  stage.className='mobile-map-stage';
-  mobileContent.appendChild(stage);
-  drawMobileNetwork(stage, expanded);
-  if(mobileSelected) renderMobileDetail(mobileSelected, stage);
-}
+  if(mobileSelected) renderMobileDetail(mobileSelected);
 
-function splitMobileLabel(name){
-  const words=String(name).trim().split(/\s+/);
-  if(name.length<=13 || words.length===1) return [name];
-  let best=1, bestDiff=Infinity;
-  for(let i=1;i<words.length;i++){
-    const a=words.slice(0,i).join(' '), b=words.slice(i).join(' ');
-    const diff=Math.abs(a.length-b.length);
-    if(diff<bestDiff){best=i;bestDiff=diff;}
-  }
-  return [words.slice(0,best).join(' '), words.slice(best).join(' ')];
-}
-
-function drawMobileNetwork(stage, cat){
-  const items=categoryData(cat);
-  const w=Math.max(stage.clientWidth, 320);
-  const h=Math.max(stage.clientHeight, 430);
-  const ns='http://www.w3.org/2000/svg';
-  const msvg=document.createElementNS(ns,'svg');
-  msvg.setAttribute('class','mobile-network');
-  msvg.setAttribute('viewBox',`0 0 ${w} ${h}`);
-  stage.appendChild(msvg);
-
-  const cx=w/2, cy=h*0.53;
-  const hubR=Math.min(60, w*0.17);
+  const items=categoryData(expanded);
   const n=items.length;
-  const maxEng=Math.max(...items.map(d=>d.engagement),1);
+  const visual=document.createElement('div');
+  visual.className='mobile-visual';
+  const NS='http://www.w3.org/2000/svg';
+  const graph=document.createElementNS(NS,'svg');
+  graph.setAttribute('class','mobile-network-svg');
+  graph.setAttribute('viewBox','0 0 400 620');
+  graph.setAttribute('role','img');
+  graph.setAttribute('aria-label',`${STYLES[expanded].label} organizations`);
 
-  // Use one true circular ring on mobile. Every organization is the same
-  // distance from the category hub, so all connector lines are equal length.
-  // The radius is capped by the phone width and available vertical space.
-  const ringR=Math.max(88, Math.min(w*0.26, h*0.22, 108));
+  const cx=200, cy=235, hubR=83;
+  const hub=document.createElementNS(NS,'circle');
+  hub.setAttribute('cx',cx); hub.setAttribute('cy',cy); hub.setAttribute('r',hubR);
+  hub.setAttribute('fill',STYLES[expanded].color); hub.setAttribute('stroke','white'); hub.setAttribute('stroke-width','3');
+  graph.appendChild(hub);
 
-  function addLine(x1,y1,x2,y2){
-    const ln=document.createElementNS(ns,'line');
-    ln.setAttribute('x1',x1);ln.setAttribute('y1',y1);ln.setAttribute('x2',x2);ln.setAttribute('y2',y2);ln.setAttribute('class','mobile-edge');
-    msvg.appendChild(ln);
-  }
+  const hubText=document.createElementNS(NS,'text');
+  hubText.setAttribute('x',cx); hubText.setAttribute('y',cy); hubText.setAttribute('class','mobile-hub-label');
+  if(STYLES[expanded].label==='AIR UNIVERSITY' || STYLES[expanded].label==='MIL & GOV'){
+    const first=document.createElementNS(NS,'tspan'); first.setAttribute('x',cx); first.setAttribute('dy','-12'); first.textContent=expanded==='Air University'?'AIR':'MIL &';
+    const second=document.createElementNS(NS,'tspan'); second.setAttribute('x',cx); second.setAttribute('dy','27'); second.textContent=expanded==='Air University'?'UNIVERSITY':'GOV';
+    hubText.appendChild(first); hubText.appendChild(second);
+  } else hubText.textContent=STYLES[expanded].label;
+  graph.appendChild(hubText);
 
-  const positions=[];
-  const offset=-Math.PI/2;
+  const max=Math.max(...items.map(d=>d.engagement),1);
+  const outerCount=Math.min(n,10);
   items.forEach((d,i)=>{
-    const a=offset + i*(Math.PI*2/Math.max(n,1));
-    const x=cx+ringR*Math.cos(a), y=cy+ringR*Math.sin(a);
-    positions.push({d,x,y,a});
-    addLine(cx,cy,x,y);
-  });
+    let a, radiusX, radiusY;
+    if(n<=10){
+      a=-Math.PI/2 + i*(Math.PI*2/n);
+      radiusX=142; radiusY=155;
+    } else if(i<outerCount){
+      a=-Math.PI/2 + i*(Math.PI*2/outerCount);
+      radiusX=145; radiusY=160;
+    } else {
+      const innerN=n-outerCount;
+      a=-Math.PI/2 + (i-outerCount)*(Math.PI*2/innerN) + Math.PI/innerN;
+      radiusX=112; radiusY=118;
+    }
+    const x=cx+radiusX*Math.cos(a), y=cy+radiusY*Math.sin(a);
+    const r=21+10*Math.sqrt(d.engagement/max);
+    const link=document.createElementNS(NS,'line');
+    link.setAttribute('x1',cx); link.setAttribute('y1',cy); link.setAttribute('x2',x); link.setAttribute('y2',y); link.setAttribute('class','mobile-link');
+    graph.insertBefore(link,hub);
 
-  const hub=document.createElementNS(ns,'circle');
-  hub.setAttribute('cx',cx);hub.setAttribute('cy',cy);hub.setAttribute('r',hubR);hub.setAttribute('fill',STYLES[cat].color);hub.setAttribute('class','mobile-center-circle');
-  msvg.appendChild(hub);
-  const hubLines=STYLES[cat].label==='AIR UNIVERSITY'?['AIR','UNIVERSITY']:(STYLES[cat].label==='MIL & GOV'?['MIL &','GOV']:[STYLES[cat].label]);
-  hubLines.forEach((lineText,j)=>{
-    const t=document.createElementNS(ns,'text');
-    t.setAttribute('x',cx);t.setAttribute('y',cy+(j-(hubLines.length-1)/2)*20);t.setAttribute('class','mobile-center-label');t.textContent=lineText;msvg.appendChild(t);
-  });
-
-  positions.forEach(({d,x,y,a})=>{
-    const g=document.createElementNS(ns,'g');
-    g.setAttribute('class','mobile-org-group'+(mobileSelected&&mobileSelected.name===d.name?' selected':''));
-    // Keep mobile nodes compact enough for 13–14 organizations on one ring,
-    // while still showing relative engagement differences.
-    const r=10+6*Math.sqrt(d.engagement/maxEng);
-    const c=document.createElementNS(ns,'circle');
-    c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r',r);c.setAttribute('fill',STYLES[d.type].color);c.setAttribute('class','mobile-org-circle');
+    const g=document.createElementNS(NS,'g');
+    g.setAttribute('class','mobile-org-node'+(mobileSelected && mobileSelected.name===d.name?' selected':''));
+    const c=document.createElementNS(NS,'circle'); c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r',r); c.setAttribute('fill',STYLES[d.type].color);
     g.appendChild(c);
 
-    const lines=splitMobileLabel(d.name);
-    const cos=Math.cos(a), sin=Math.sin(a);
-    let anchor='middle';
-    let lx=x, ly=y;
-    const sideGap=r+10;
-    const lineStep=12;
-    if(cos>0.22){
-      anchor='start';
-      lx=x+sideGap;
-      ly=y-((lines.length-1)*lineStep)/2;
-    } else if(cos<-0.22){
-      anchor='end';
-      lx=x-sideGap;
-      ly=y-((lines.length-1)*lineStep)/2;
-    } else {
-      anchor='middle';
-      lx=x;
-      ly=y + (sin<0 ? -(r+12+(lines.length-1)*lineStep) : (r+14));
-    }
-    lines.forEach((lineText,j)=>{
-      const t=document.createElementNS(ns,'text');
-      t.setAttribute('x',lx);t.setAttribute('y',ly+j*lineStep);t.setAttribute('text-anchor',anchor);t.setAttribute('class','mobile-org-label');t.textContent=lineText;g.appendChild(t);
-    });
-    g.addEventListener('click',()=>{ mobileSelected=d; renderMobileApp(); });
-    msvg.appendChild(g);
+    const label=document.createElementNS(NS,'text');
+    const onRight=x>=cx;
+    let tx=onRight?x+r+7:x-r-7;
+    let anchor=onRight?'start':'end';
+    // Keep long names readable and inside the viewBox.
+    if(onRight && tx>326){ tx=x-r-7; anchor='end'; }
+    if(!onRight && tx<74){ tx=x+r+7; anchor='start'; }
+    label.setAttribute('x',tx); label.setAttribute('y',y); label.setAttribute('text-anchor',anchor); label.setAttribute('class','mobile-org-label');
+    const words=String(d.name).split(' ');
+    const lines=[]; let current='';
+    words.forEach(word=>{ const next=(current+' '+word).trim(); if(next.length>18 && current){ lines.push(current); current=word; } else current=next; });
+    if(current) lines.push(current);
+    lines.slice(0,2).forEach((part,j)=>{ const sp=document.createElementNS(NS,'tspan'); sp.setAttribute('x',tx); sp.setAttribute('dy',j===0?(lines.length>1?'-7':'0'):'15'); sp.textContent=part; label.appendChild(sp); });
+    g.appendChild(label);
+    g.addEventListener('click',()=>{ mobileSelected=d; renderMobileApp(); window.scrollTo({top:0,behavior:'smooth'}); });
+    graph.appendChild(g);
   });
+
+  visual.appendChild(graph);
+  mobileContent.appendChild(visual);
+  setStreamlitHeight();
 }
-function renderMobileDetail(d, container){
+function renderMobileDetail(d){
   const detail=document.createElement('div');
   detail.className='mobile-detail';
   detail.innerHTML=`<button class="close" aria-label="Close details">×</button><h3>${esc(d.name)}</h3><div class="mobile-detail-grid"><b>Category</b><span>${esc(d.type)}</span><b>Engagements</b><span>${esc(Number(d.engagement).toLocaleString())}</span><b>Engagement Summary</b><span>${esc(d.summary)}</span><b>Expertise Areas</b><span>${esc(d.expertise)}</span></div>`;
   detail.querySelector('.close').addEventListener('click',()=>{mobileSelected=null; renderMobileApp();});
-  container.appendChild(detail);
+  mobileContent.appendChild(detail);
 }
 
 function drawOrg(d,x,y,r,a,w,h,mobile=false){
@@ -447,7 +448,7 @@ function moveTip(e){ const r=wrap.getBoundingClientRect(); tooltip.style.left=(e
 function showTipAtNode(g,d){ const c=g.querySelector('circle'); if(!c)return; const p=svg.createSVGPoint(); p.x=parseFloat(c.getAttribute('cx')); p.y=parseFloat(c.getAttribute('cy')); const sp=p.matrixTransform(svg.getScreenCTM()); const r=wrap.getBoundingClientRect(); tooltip.innerHTML=tipHtml(d); tooltip.style.left=(sp.x-r.left)+'px'; tooltip.style.top=(sp.y-r.top)+'px'; tooltip.style.opacity='1'; }
 function hideTip(){ tooltip.style.opacity='0'; }
 
-function pin(d){ if(isMobile()){ mobileSelected=d; renderMobileApp(); return; } if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
+function pin(d){ if(isMobile()){ mobileSelected=d; renderMobileApp(); window.scrollTo({top:0, behavior:'smooth'}); return; } if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
 function closePin(name){ pinned=pinned.filter(p=>p.name!==name); renderCards(); updateSelection(); }
 function updateSelection(){ document.querySelectorAll('.orgNode').forEach(g=>g.classList.toggle('selected',pinned.some(p=>p.name===g.dataset.name))); }
 function renderCards(){
@@ -462,38 +463,10 @@ function renderCards(){
   });
 }
 
-// Mobile Safari changes the viewport height whenever its address or bottom toolbar
-// expands/collapses during a swipe. Treating that as a real layout resize rebuilt the
-// entire mobile list and jumped the user back to the top. Only redraw when the width
-// changes meaningfully (rotation/resizing) or when crossing the mobile breakpoint.
-let resizeTimer;
-let lastViewportWidth = window.innerWidth;
-let lastMobileMode = isMobile();
-window.addEventListener('resize', () => {
-  const currentWidth = window.innerWidth;
-  const currentMobileMode = isMobile();
-  const crossedBreakpoint = currentMobileMode !== lastMobileMode;
-  const meaningfulWidthChange = Math.abs(currentWidth - lastViewportWidth) > 24;
-
-  if (!crossedBreakpoint && currentMobileMode && !meaningfulWidthChange) {
-    // Ignore mobile height-only changes caused by Safari browser chrome.
-    return;
-  }
-
-  const savedScrollY = window.scrollY;
-  lastViewportWidth = currentWidth;
-  lastMobileMode = currentMobileMode;
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    layout();
-    if (currentMobileMode) {
-      requestAnimationFrame(() => window.scrollTo(0, savedScrollY));
-    }
-  }, 140);
-});
+let resizeTimer; window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(layout,120);});
 layout();
 </script>
 </body>
 </html>'''.replace('__DATA__', payload).replace('__STYLES__', styles_payload)
 
-components.html(html, height=900, scrolling=False)
+components.html(html, height=1050, scrolling=True)
