@@ -142,24 +142,22 @@ html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden
   #mobileContent { display:flex; flex-direction:column; position:relative; width:100%; height:100vh; height:100dvh; overflow:hidden; margin:0; padding:calc(10px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom)); background:radial-gradient(circle at 50% 38%, #0b2a52 0%, #031630 72%, #020d1f 100%); }
   .mobile-header { text-align:center; flex:0 0 auto; margin:0 0 7px; }
   .mobile-header h1 { margin:0; font-size:22px; line-height:1.05; font-weight:900; }
-  .mobile-header p { margin:4px 0 0; color:#d9e7ff; font-size:11px; }
   .mobile-tabs { display:grid; grid-template-columns:1fr 1fr; gap:6px; flex:0 0 auto; margin:5px 0 6px; }
   .mobile-tab { min-height:43px; border:2px solid white; border-radius:14px; color:white; font-weight:900; font-size:14px; padding:4px 6px; cursor:pointer; line-height:1.05; }
   .mobile-tab.active { outline:3px solid rgba(255,230,109,.95); outline-offset:1px; }
-  .mobile-map-stage { position:relative; flex:1 1 auto; min-height:0; overflow:hidden; border-radius:18px; }
+  .mobile-map-stage { position:relative; flex:1 1 auto; min-height:0; overflow:hidden; border-radius:18px; margin-top:2px; }
   .mobile-network { width:100%; height:100%; display:block; overflow:visible; }
   .mobile-edge { stroke:rgba(255,255,255,.68); stroke-width:1.35; }
   .mobile-center-circle { stroke:white; stroke-width:3; }
-  .mobile-center-label { fill:white; font-size:18px; font-weight:900; text-anchor:middle; dominant-baseline:middle; pointer-events:none; }
+  .mobile-center-label { fill:white; font-size:19px; font-weight:900; text-anchor:middle; dominant-baseline:middle; pointer-events:none; }
   .mobile-org-group { cursor:pointer; }
   .mobile-org-circle { stroke:white; stroke-width:2; }
   .mobile-org-group.selected .mobile-org-circle { stroke:#ffe66d; stroke-width:4; }
-  .mobile-org-label { fill:white; font-size:9.5px; font-weight:800; text-anchor:middle; paint-order:stroke; stroke:#031630; stroke-width:3px; stroke-linejoin:round; pointer-events:none; }
-  .mobile-detail { position:absolute; z-index:30; left:8px; right:8px; bottom:8px; max-height:47%; overflow-y:auto; background:rgba(10,36,72,.98); border:1px solid rgba(255,255,255,.38); border-radius:14px; padding:13px 40px 13px 14px; box-shadow:0 10px 30px rgba(0,0,0,.48); }
+  .mobile-org-label { fill:white; font-size:11px; font-weight:800; text-anchor:middle; paint-order:stroke; stroke:#031630; stroke-width:3px; stroke-linejoin:round; pointer-events:none; }
+  .mobile-detail { position:absolute; z-index:30; left:8px; right:8px; top:8px; bottom:auto; max-height:42%; overflow-y:auto; background:rgba(10,36,72,.98); border:1px solid rgba(255,255,255,.38); border-radius:14px; padding:13px 40px 13px 14px; box-shadow:0 10px 30px rgba(0,0,0,.48); }
   .mobile-detail h3 { margin:0 0 8px; font-size:18px; }
   .mobile-detail-grid { display:grid; grid-template-columns:88px 1fr; gap:5px 8px; font-size:12px; line-height:1.28; }
   .mobile-detail-grid b { color:var(--muted); }
-  .mobile-help { display:flex; align-items:center; justify-content:center; flex:1; text-align:center; color:#d9e7ff; font-size:13px; padding:20px; }
   #tooltip { display:none !important; }
   #panelTitle { display:none; }
 }
@@ -291,7 +289,7 @@ function renderMobileApp() {
 
   const header=document.createElement('div');
   header.className='mobile-header';
-  header.innerHTML='<h1>2025–2026 AUiX Network Map</h1><p>Choose a category, then tap an organization bubble.</p>';
+  header.innerHTML='<h1>2025–2026 AUiX Network Map</h1>';
   mobileContent.appendChild(header);
 
   const tabs=document.createElement('div');
@@ -312,11 +310,7 @@ function renderMobileApp() {
   mobileContent.appendChild(tabs);
 
   if(!expanded){
-    const help=document.createElement('div');
-    help.className='mobile-help';
-    help.innerHTML='<div><b>Choose a category above</b><br><br>Its organizations will appear as bubbles around the category circle.</div>';
-    mobileContent.appendChild(help);
-    return;
+    expanded = categories[0];
   }
 
   const stage=document.createElement('div');
@@ -348,15 +342,15 @@ function drawMobileNetwork(stage, cat){
   msvg.setAttribute('viewBox',`0 0 ${w} ${h}`);
   stage.appendChild(msvg);
 
-  const cx=w/2, cy=h*0.49;
-  const hubR=Math.min(50, w*0.135);
+  const cx=w/2, cy=h*0.53;
+  const hubR=Math.min(60, w*0.17);
   const n=items.length;
   const maxEng=Math.max(...items.map(d=>d.engagement),1);
 
   // Use one true circular ring on mobile. Every organization is the same
   // distance from the category hub, so all connector lines are equal length.
   // The radius is capped by the phone width and available vertical space.
-  const ringR=Math.max(112, Math.min(w*0.37, h*0.34, 148));
+  const ringR=Math.max(88, Math.min(w*0.26, h*0.22, 108));
 
   function addLine(x1,y1,x2,y2){
     const ln=document.createElementNS(ns,'line');
@@ -394,22 +388,26 @@ function drawMobileNetwork(stage, cat){
 
     const lines=splitMobileLabel(d.name);
     const cos=Math.cos(a), sin=Math.sin(a);
-    const labelGap=r+7;
-    let lx=x+cos*labelGap, ly=y+sin*labelGap;
     let anchor='middle';
-    if(cos>0.28) anchor='start';
-    else if(cos<-0.28) anchor='end';
-
-    // Place labels radially outside their bubbles. This keeps each label tied
-    // to its node and reduces collisions between neighboring names.
-    if(Math.abs(cos)<=0.28){
-      ly += sin<0 ? -4-(lines.length-1)*10 : 10;
+    let lx=x, ly=y;
+    const sideGap=r+10;
+    const lineStep=12;
+    if(cos>0.22){
+      anchor='start';
+      lx=x+sideGap;
+      ly=y-((lines.length-1)*lineStep)/2;
+    } else if(cos<-0.22){
+      anchor='end';
+      lx=x-sideGap;
+      ly=y-((lines.length-1)*lineStep)/2;
     } else {
-      ly -= (lines.length-1)*5;
+      anchor='middle';
+      lx=x;
+      ly=y + (sin<0 ? -(r+12+(lines.length-1)*lineStep) : (r+14));
     }
     lines.forEach((lineText,j)=>{
       const t=document.createElementNS(ns,'text');
-      t.setAttribute('x',lx);t.setAttribute('y',ly+j*10);t.setAttribute('text-anchor',anchor);t.setAttribute('class','mobile-org-label');t.textContent=lineText;g.appendChild(t);
+      t.setAttribute('x',lx);t.setAttribute('y',ly+j*lineStep);t.setAttribute('text-anchor',anchor);t.setAttribute('class','mobile-org-label');t.textContent=lineText;g.appendChild(t);
     });
     g.addEventListener('click',()=>{ mobileSelected=d; renderMobileApp(); });
     msvg.appendChild(g);
@@ -449,7 +447,7 @@ function moveTip(e){ const r=wrap.getBoundingClientRect(); tooltip.style.left=(e
 function showTipAtNode(g,d){ const c=g.querySelector('circle'); if(!c)return; const p=svg.createSVGPoint(); p.x=parseFloat(c.getAttribute('cx')); p.y=parseFloat(c.getAttribute('cy')); const sp=p.matrixTransform(svg.getScreenCTM()); const r=wrap.getBoundingClientRect(); tooltip.innerHTML=tipHtml(d); tooltip.style.left=(sp.x-r.left)+'px'; tooltip.style.top=(sp.y-r.top)+'px'; tooltip.style.opacity='1'; }
 function hideTip(){ tooltip.style.opacity='0'; }
 
-function pin(d){ if(isMobile()){ mobileSelected=d; renderMobileApp(); window.scrollTo({top:0, behavior:'smooth'}); return; } if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
+function pin(d){ if(isMobile()){ mobileSelected=d; renderMobileApp(); return; } if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
 function closePin(name){ pinned=pinned.filter(p=>p.name!==name); renderCards(); updateSelection(); }
 function updateSelection(){ document.querySelectorAll('.orgNode').forEach(g=>g.classList.toggle('selected',pinned.some(p=>p.name===g.dataset.name))); }
 function renderCards(){
