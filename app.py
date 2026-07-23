@@ -154,7 +154,7 @@ html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden
   .mobile-org-group { cursor:pointer; }
   .mobile-org-circle { stroke:white; stroke-width:2; }
   .mobile-org-group.selected .mobile-org-circle { stroke:#ffe66d; stroke-width:4; }
-  .mobile-org-label { fill:white; font-size:10.5px; font-weight:800; text-anchor:middle; paint-order:stroke; stroke:#031630; stroke-width:3px; stroke-linejoin:round; pointer-events:none; }
+  .mobile-org-label { fill:white; font-size:9.5px; font-weight:800; text-anchor:middle; paint-order:stroke; stroke:#031630; stroke-width:3px; stroke-linejoin:round; pointer-events:none; }
   .mobile-detail { position:absolute; z-index:30; left:8px; right:8px; bottom:8px; max-height:47%; overflow-y:auto; background:rgba(10,36,72,.98); border:1px solid rgba(255,255,255,.38); border-radius:14px; padding:13px 40px 13px 14px; box-shadow:0 10px 30px rgba(0,0,0,.48); }
   .mobile-detail h3 { margin:0 0 8px; font-size:18px; }
   .mobile-detail-grid { display:grid; grid-template-columns:88px 1fr; gap:5px 8px; font-size:12px; line-height:1.28; }
@@ -348,15 +348,15 @@ function drawMobileNetwork(stage, cat){
   msvg.setAttribute('viewBox',`0 0 ${w} ${h}`);
   stage.appendChild(msvg);
 
-  const cx=w/2, cy=h*0.48;
-  const hubR=Math.min(56, w*0.15);
+  const cx=w/2, cy=h*0.49;
+  const hubR=Math.min(50, w*0.135);
   const n=items.length;
-  const outerCount=Math.ceil(n/2);
-  const innerCount=n-outerCount;
   const maxEng=Math.max(...items.map(d=>d.engagement),1);
 
-  const ring1X=Math.min(w*0.34, 145), ring1Y=Math.min(h*0.29, 150);
-  const ring2X=Math.min(w*0.43, 178), ring2Y=Math.min(h*0.40, 205);
+  // Use one true circular ring on mobile. Every organization is the same
+  // distance from the category hub, so all connector lines are equal length.
+  // The radius is capped by the phone width and available vertical space.
+  const ringR=Math.max(112, Math.min(w*0.37, h*0.34, 148));
 
   function addLine(x1,y1,x2,y2){
     const ln=document.createElementNS(ns,'line');
@@ -365,13 +365,11 @@ function drawMobileNetwork(stage, cat){
   }
 
   const positions=[];
+  const offset=-Math.PI/2;
   items.forEach((d,i)=>{
-    let ringIndex, idx, count, rx, ry, offset;
-    if(i<outerCount){ ringIndex=0; idx=i; count=outerCount; rx=ring2X; ry=ring2Y; offset=-Math.PI/2; }
-    else { ringIndex=1; idx=i-outerCount; count=innerCount; rx=ring1X; ry=ring1Y; offset=-Math.PI/2 + (innerCount?Math.PI/innerCount:0); }
-    const a=offset + idx*(Math.PI*2/Math.max(count,1));
-    const x=cx+rx*Math.cos(a), y=cy+ry*Math.sin(a);
-    positions.push({d,x,y,a,ringIndex});
+    const a=offset + i*(Math.PI*2/Math.max(n,1));
+    const x=cx+ringR*Math.cos(a), y=cy+ringR*Math.sin(a);
+    positions.push({d,x,y,a});
     addLine(cx,cy,x,y);
   });
 
@@ -384,20 +382,34 @@ function drawMobileNetwork(stage, cat){
     t.setAttribute('x',cx);t.setAttribute('y',cy+(j-(hubLines.length-1)/2)*20);t.setAttribute('class','mobile-center-label');t.textContent=lineText;msvg.appendChild(t);
   });
 
-  positions.forEach(({d,x,y,a,ringIndex})=>{
+  positions.forEach(({d,x,y,a})=>{
     const g=document.createElementNS(ns,'g');
     g.setAttribute('class','mobile-org-group'+(mobileSelected&&mobileSelected.name===d.name?' selected':''));
-    const r=12+9*Math.sqrt(d.engagement/maxEng);
+    // Keep mobile nodes compact enough for 13–14 organizations on one ring,
+    // while still showing relative engagement differences.
+    const r=10+6*Math.sqrt(d.engagement/maxEng);
     const c=document.createElementNS(ns,'circle');
     c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r',r);c.setAttribute('fill',STYLES[d.type].color);c.setAttribute('class','mobile-org-circle');
     g.appendChild(c);
 
     const lines=splitMobileLabel(d.name);
-    let ly=y+r+13;
-    if(Math.sin(a)<-0.45) ly=y-r-10-(lines.length-1)*11;
+    const cos=Math.cos(a), sin=Math.sin(a);
+    const labelGap=r+7;
+    let lx=x+cos*labelGap, ly=y+sin*labelGap;
+    let anchor='middle';
+    if(cos>0.28) anchor='start';
+    else if(cos<-0.28) anchor='end';
+
+    // Place labels radially outside their bubbles. This keeps each label tied
+    // to its node and reduces collisions between neighboring names.
+    if(Math.abs(cos)<=0.28){
+      ly += sin<0 ? -4-(lines.length-1)*10 : 10;
+    } else {
+      ly -= (lines.length-1)*5;
+    }
     lines.forEach((lineText,j)=>{
       const t=document.createElementNS(ns,'text');
-      t.setAttribute('x',x);t.setAttribute('y',ly+j*11);t.setAttribute('class','mobile-org-label');t.textContent=lineText;g.appendChild(t);
+      t.setAttribute('x',lx);t.setAttribute('y',ly+j*10);t.setAttribute('text-anchor',anchor);t.setAttribute('class','mobile-org-label');t.textContent=lineText;g.appendChild(t);
     });
     g.addEventListener('click',()=>{ mobileSelected=d; renderMobileApp(); });
     msvg.appendChild(g);
