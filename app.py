@@ -416,7 +416,36 @@ function renderCards(){
   });
 }
 
-let resizeTimer; window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(layout,120);});
+// Mobile Safari changes the viewport height whenever its address or bottom toolbar
+// expands/collapses during a swipe. Treating that as a real layout resize rebuilt the
+// entire mobile list and jumped the user back to the top. Only redraw when the width
+// changes meaningfully (rotation/resizing) or when crossing the mobile breakpoint.
+let resizeTimer;
+let lastViewportWidth = window.innerWidth;
+let lastMobileMode = isMobile();
+window.addEventListener('resize', () => {
+  const currentWidth = window.innerWidth;
+  const currentMobileMode = isMobile();
+  const crossedBreakpoint = currentMobileMode !== lastMobileMode;
+  const meaningfulWidthChange = Math.abs(currentWidth - lastViewportWidth) > 24;
+
+  if (!crossedBreakpoint && currentMobileMode && !meaningfulWidthChange) {
+    // Ignore mobile height-only changes caused by Safari browser chrome.
+    setStreamlitHeight();
+    return;
+  }
+
+  const savedScrollY = window.scrollY;
+  lastViewportWidth = currentWidth;
+  lastMobileMode = currentMobileMode;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    layout();
+    if (currentMobileMode) {
+      requestAnimationFrame(() => window.scrollTo(0, savedScrollY));
+    }
+  }, 140);
+});
 layout();
 </script>
 </body>
