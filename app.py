@@ -151,7 +151,7 @@ html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden
   .mobile-network-svg { width:100%; height:auto; display:block; overflow:visible; }
   .mobile-link { stroke:rgba(255,255,255,.72); stroke-width:2; }
   .mobile-hub-label { fill:white; font-weight:900; text-anchor:middle; dominant-baseline:middle; font-size:23px; pointer-events:none; }
-  .mobile-org-label { fill:white; font-weight:800; dominant-baseline:middle; font-size:13px; paint-order:stroke; stroke:#031630; stroke-width:4px; stroke-linejoin:round; pointer-events:none; }
+  .mobile-org-label { fill:white; font-weight:800; dominant-baseline:middle; font-size:12px; paint-order:stroke; stroke:#031630; stroke-width:4px; stroke-linejoin:round; pointer-events:none; }
   .mobile-org-node { cursor:pointer; }
   .mobile-org-node circle { stroke:white; stroke-width:3; }
   .mobile-org-node.selected circle { stroke:#ffe66d; stroke-width:6; }
@@ -343,11 +343,30 @@ function renderMobileApp() {
   const NS='http://www.w3.org/2000/svg';
   const graph=document.createElementNS(NS,'svg');
   graph.setAttribute('class','mobile-network-svg');
-  graph.setAttribute('viewBox','0 0 400 500');
+
+  // Use two balanced columns around the category hub. This keeps every bubble
+  // evenly spaced and gives each organization name its own dedicated row.
+  const leftItems=[];
+  const rightItems=[];
+  items.forEach((item,index)=>{
+    (index % 2 === 0 ? leftItems : rightItems).push(item);
+  });
+  const rowCount=Math.max(leftItems.length,rightItems.length,1);
+  const topY=78;
+  const rowGap=54;
+  const bottomY=topY+(rowCount-1)*rowGap;
+  const graphHeight=Math.max(420,bottomY+92);
+  const cx=200;
+  const cy=(topY+bottomY)/2;
+  const hubR=58;
+  const leftX=104;
+  const rightX=296;
+  const bubbleR=19;
+
+  graph.setAttribute('viewBox',`0 0 400 ${graphHeight}`);
   graph.setAttribute('role','img');
   graph.setAttribute('aria-label',`${STYLES[expanded].label} organizations`);
 
-  const cx=200, cy=185, hubR=64;
   const hub=document.createElementNS(NS,'circle');
   hub.setAttribute('cx',cx); hub.setAttribute('cy',cy); hub.setAttribute('r',hubR);
   hub.setAttribute('fill',STYLES[expanded].color); hub.setAttribute('stroke','white'); hub.setAttribute('stroke-width','3');
@@ -356,63 +375,42 @@ function renderMobileApp() {
   const hubText=document.createElementNS(NS,'text');
   hubText.setAttribute('x',cx); hubText.setAttribute('y',cy); hubText.setAttribute('class','mobile-hub-label');
   if(STYLES[expanded].label==='AIR UNIVERSITY' || STYLES[expanded].label==='MIL & GOV'){
-    const first=document.createElementNS(NS,'tspan'); first.setAttribute('x',cx); first.setAttribute('dy','-12'); first.textContent=expanded==='Air University'?'AIR':'MIL &';
-    const second=document.createElementNS(NS,'tspan'); second.setAttribute('x',cx); second.setAttribute('dy','27'); second.textContent=expanded==='Air University'?'UNIVERSITY':'GOV';
+    const first=document.createElementNS(NS,'tspan'); first.setAttribute('x',cx); first.setAttribute('dy','-11'); first.textContent=expanded==='Air University'?'AIR':'MIL &';
+    const second=document.createElementNS(NS,'tspan'); second.setAttribute('x',cx); second.setAttribute('dy','25'); second.textContent=expanded==='Air University'?'UNIVERSITY':'GOV';
     hubText.appendChild(first); hubText.appendChild(second);
   } else hubText.textContent=STYLES[expanded].label;
   graph.appendChild(hubText);
 
-  const max=Math.max(...items.map(d=>d.engagement),1);
-  const outerCount=Math.min(n,10);
-  items.forEach((d,i)=>{
-    let a, radiusX, radiusY;
-    if(n<=10){
-      a=-Math.PI/2 + i*(Math.PI*2/n);
-      radiusX=142; radiusY=132;
-    } else if(i<outerCount){
-      a=-Math.PI/2 + i*(Math.PI*2/outerCount);
-      radiusX=145; radiusY=136;
-    } else {
-      const innerN=n-outerCount;
-      a=-Math.PI/2 + (i-outerCount)*(Math.PI*2/innerN) + Math.PI/innerN;
-      radiusX=112; radiusY=104;
-    }
-    const x=cx+radiusX*Math.cos(a), y=cy+radiusY*Math.sin(a);
-    const r=15+7*Math.sqrt(d.engagement/max);
-    const link=document.createElementNS(NS,'line');
-    link.setAttribute('x1',cx); link.setAttribute('y1',cy); link.setAttribute('x2',x); link.setAttribute('y2',y); link.setAttribute('class','mobile-link');
-    graph.insertBefore(link,hub);
+  function addMobileOrganization(d,side,rowIndex){
+    const x=side==='left'?leftX:rightX;
+    const y=topY+rowIndex*rowGap;
+    const line=document.createElementNS(NS,'line');
+    line.setAttribute('x1',cx); line.setAttribute('y1',cy); line.setAttribute('x2',x); line.setAttribute('y2',y); line.setAttribute('class','mobile-link');
+    graph.insertBefore(line,hub);
 
     const g=document.createElementNS(NS,'g');
     g.setAttribute('class','mobile-org-node'+(mobileSelected && mobileSelected.name===d.name?' selected':''));
-    const c=document.createElementNS(NS,'circle'); c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r',r); c.setAttribute('fill',STYLES[d.type].color);
+    const c=document.createElementNS(NS,'circle');
+    c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r',bubbleR); c.setAttribute('fill',STYLES[d.type].color);
     g.appendChild(c);
 
     const label=document.createElementNS(NS,'text');
-    // Keep every label horizontally beside its bubble. For bubbles near the
-    // vertical centerline, alternate sides so labels never sit above/below nodes.
-    let onRight;
-    if(Math.abs(x-cx) < 28){
-      onRight = (i % 2 === 0);
-    } else {
-      onRight = x > cx;
-    }
-    let tx=onRight?x+r+9:x-r-9;
-    let anchor=onRight?'start':'end';
-    // Flip inward near the SVG edges so full names remain visible.
-    if(onRight && tx>322){ tx=x-r-9; anchor='end'; }
-    if(!onRight && tx<78){ tx=x+r+9; anchor='start'; }
-    label.setAttribute('x',tx); label.setAttribute('y',y); label.setAttribute('text-anchor',anchor); label.setAttribute('class','mobile-org-label');
+    const onLeft=side==='left';
+    const tx=onLeft?x-bubbleR-8:x+bubbleR+8;
+    label.setAttribute('x',tx); label.setAttribute('y',y); label.setAttribute('text-anchor',onLeft?'end':'start'); label.setAttribute('class','mobile-org-label');
     const words=String(d.name).split(' ');
     const lines=[]; let current='';
-    words.forEach(word=>{ const next=(current+' '+word).trim(); if(next.length>18 && current){ lines.push(current); current=word; } else current=next; });
+    words.forEach(word=>{ const next=(current+' '+word).trim(); if(next.length>17 && current){ lines.push(current); current=word; } else current=next; });
     if(current) lines.push(current);
-    lines.slice(0,2).forEach((part,j)=>{ const sp=document.createElementNS(NS,'tspan'); sp.setAttribute('x',tx); sp.setAttribute('dy',j===0?(lines.length>1?'-7':'0'):'15'); sp.textContent=part; label.appendChild(sp); });
+    const shown=lines.slice(0,2);
+    shown.forEach((part,j)=>{ const sp=document.createElementNS(NS,'tspan'); sp.setAttribute('x',tx); sp.setAttribute('dy',j===0?(shown.length>1?'-7':'0'):'15'); sp.textContent=part; label.appendChild(sp); });
     g.appendChild(label);
     g.addEventListener('click',()=>{ mobileSelected=d; renderMobileApp(); window.scrollTo({top:0,behavior:'smooth'}); });
     graph.appendChild(g);
-  });
+  }
 
+  leftItems.forEach((d,i)=>addMobileOrganization(d,'left',i));
+  rightItems.forEach((d,i)=>addMobileOrganization(d,'right',i));
   visual.appendChild(graph);
   mobileContent.appendChild(visual);
   setStreamlitHeight();
