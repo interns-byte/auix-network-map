@@ -347,7 +347,7 @@ function renderMobileApp() {
   graph.setAttribute('role','img');
   graph.setAttribute('aria-label',`${STYLES[expanded].label} organizations`);
 
-  const cx=200, cy=185, hubR=78;
+  const cx=200, cy=185, hubR=64;
   const hub=document.createElementNS(NS,'circle');
   hub.setAttribute('cx',cx); hub.setAttribute('cy',cy); hub.setAttribute('r',hubR);
   hub.setAttribute('fill',STYLES[expanded].color); hub.setAttribute('stroke','white'); hub.setAttribute('stroke-width','3');
@@ -378,7 +378,7 @@ function renderMobileApp() {
       radiusX=112; radiusY=104;
     }
     const x=cx+radiusX*Math.cos(a), y=cy+radiusY*Math.sin(a);
-    const r=21+10*Math.sqrt(d.engagement/max);
+    const r=15+7*Math.sqrt(d.engagement/max);
     const link=document.createElementNS(NS,'line');
     link.setAttribute('x1',cx); link.setAttribute('y1',cy); link.setAttribute('x2',x); link.setAttribute('y2',y); link.setAttribute('class','mobile-link');
     graph.insertBefore(link,hub);
