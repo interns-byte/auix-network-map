@@ -389,12 +389,19 @@ function renderMobileApp() {
     g.appendChild(c);
 
     const label=document.createElementNS(NS,'text');
-    const onRight=x>=cx;
-    let tx=onRight?x+r+8:x-r-8;
+    // Keep every label horizontally beside its bubble. For bubbles near the
+    // vertical centerline, alternate sides so labels never sit above/below nodes.
+    let onRight;
+    if(Math.abs(x-cx) < 28){
+      onRight = (i % 2 === 0);
+    } else {
+      onRight = x > cx;
+    }
+    let tx=onRight?x+r+9:x-r-9;
     let anchor=onRight?'start':'end';
-    // Labels always stay beside their bubbles, never above them.
-    if(onRight && tx>322){ tx=x-r-8; anchor='end'; }
-    if(!onRight && tx<78){ tx=x+r+8; anchor='start'; }
+    // Flip inward near the SVG edges so full names remain visible.
+    if(onRight && tx>322){ tx=x-r-9; anchor='end'; }
+    if(!onRight && tx<78){ tx=x+r+9; anchor='start'; }
     label.setAttribute('x',tx); label.setAttribute('y',y); label.setAttribute('text-anchor',anchor); label.setAttribute('class','mobile-org-label');
     const words=String(d.name).split(' ');
     const lines=[]; let current='';
