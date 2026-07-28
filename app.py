@@ -36,15 +36,23 @@ def load_data() -> pd.DataFrame:
     data = pd.read_excel(DATA_FILE)
     data.columns = [str(column).strip().lower() for column in data.columns]
 
-    if "engagament" in data.columns and "engagement" not in data.columns:
-        data = data.rename(columns={"engagament": "engagement"})
+    aliases = {
+        "engagament": "engagement",
+        "categories": "type",
+        "category": "type",
+        "expertise areas": "expertise",
+        "engagement summary": "summary",
+    }
+    for source, target in aliases.items():
+        if source in data.columns and target not in data.columns:
+            data = data.rename(columns={source: target})
 
     required = {"name", "type", "engagement"}
     missing = required.difference(data.columns)
     if missing:
         raise ValueError(f"Missing required columns: {', '.join(sorted(missing))}")
 
-    for optional in ("relationship", "expertise"):
+    for optional in ("summary", "expertise"):
         if optional not in data.columns:
             data[optional] = "Not provided"
 
@@ -52,7 +60,7 @@ def load_data() -> pd.DataFrame:
     data["name"] = data["name"].astype(str).str.strip()
     data["type"] = data["type"].map(normalize_category)
     data["engagement"] = pd.to_numeric(data["engagement"], errors="coerce").fillna(0)
-    data["relationship"] = data["relationship"].fillna("Not provided").astype(str).str.strip()
+    data["summary"] = data["summary"].fillna("Not provided").astype(str).str.strip()
     data["expertise"] = data["expertise"].fillna("Not provided").astype(str).str.strip()
     return data[data["type"].isin(CATEGORY_STYLE)].copy()
 
@@ -83,7 +91,7 @@ for row in df.to_dict(orient="records"):
             "name": str(row["name"]),
             "type": str(row["type"]),
             "engagement": float(row["engagement"]),
-            "relationship": str(row["relationship"]),
+            "summary": str(row["summary"]),
             "expertise": str(row["expertise"]),
         }
     )
@@ -99,11 +107,11 @@ html = r'''<!doctype html>
 <style>
 :root { --bg:#031630; --panel:#0a2448; --line:rgba(255,255,255,.74); --muted:#aac9f5; }
 * { box-sizing:border-box; }
-html, body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); color:white; font-family:Arial, Helvetica, sans-serif; }
-#app { width:100vw; height:100vh; display:grid; grid-template-columns:minmax(0, 1fr) 340px; background:radial-gradient(circle at 42% 42%, #0b2a52 0%, #031630 62%, #020d1f 100%); }
-#mapWrap { min-width:0; height:100vh; position:relative; overflow:hidden; }
+html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden; background:var(--bg); color:white; font-family:Arial, Helvetica, sans-serif; }
+#app { width:100vw; height:100vh; height:100dvh; display:grid; grid-template-columns:minmax(0, 1fr) 340px; background:radial-gradient(circle at 42% 42%, #0b2a52 0%, #031630 62%, #020d1f 100%); }
+#mapWrap { min-width:0; height:100vh; height:100dvh; position:relative; overflow:hidden; }
 #map { width:100%; height:100%; display:block; }
-#panel { height:100vh; overflow-y:auto; padding:88px 18px 18px; border-left:1px solid rgba(255,255,255,.18); background:rgba(2,13,31,.78); }
+#panel { height:100vh; height:100dvh; overflow-y:auto; padding:88px 18px 18px; border-left:1px solid rgba(255,255,255,.18); background:rgba(2,13,31,.78); }
 #panelTitle { position:absolute; top:22px; right:18px; width:304px; color:#d8e8ff; font-weight:800; font-size:14px; letter-spacing:.02em; }
 .empty { background:rgba(10,36,72,.94); border:1px solid rgba(255,255,255,.3); border-radius:16px; padding:18px; color:#c8daf4; line-height:1.45; }
 .card { position:relative; background:rgba(10,36,72,.96); border:1px solid rgba(255,255,255,.32); border-radius:16px; padding:17px 42px 17px 18px; margin-bottom:12px; box-shadow:0 8px 28px rgba(0,0,0,.3); }
@@ -126,29 +134,33 @@ html, body { margin:0; width:100%; height:100%; overflow:hidden; background:var(
 #mobileContent { display:none; }
 
 @media (max-width: 700px) {
-  #app { grid-template-columns:1fr; grid-template-rows:100vh; }
-  #mapWrap { height:100vh; }
+  html, body { height:auto; min-height:100%; overflow:visible; }
+  #app { display:block; width:100%; height:auto; min-height:100vh; }
+  #mapWrap { height:auto; min-height:100vh; overflow:visible; padding:0; }
+  #map { display:none !important; }
   #panel { display:none !important; }
-  #mobileContent { display:block; position:absolute; left:10px; right:10px; top:202px; bottom:10px; overflow-y:auto; padding:0 2px 10px; }
-  .mobile-category-title { text-align:center; font-weight:900; font-size:20px; margin:2px 0 10px; }
-  .mobile-detail { position:relative; background:rgba(10,36,72,.98); border:1px solid rgba(255,255,255,.35); border-radius:14px; padding:13px 40px 13px 14px; margin-bottom:10px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
-  .mobile-detail h3 { margin:0 0 8px; font-size:18px; }
-  .mobile-detail-grid { display:grid; grid-template-columns:92px 1fr; gap:5px 8px; font-size:13px; line-height:1.3; }
+  #mobileContent { display:block; position:relative; width:100%; height:auto; min-height:100vh; overflow:visible; margin:0; padding:calc(14px + env(safe-area-inset-top)) 10px calc(100px + env(safe-area-inset-bottom)); touch-action:pan-y; background:radial-gradient(circle at 50% 24%, #0b2a52 0%, #031630 68%, #020d1f 100%); }
+  .mobile-header { text-align:center; margin:0 0 10px; }
+  .mobile-header h1 { margin:0; font-size:27px; line-height:1.08; font-weight:900; }
+  .mobile-header p { margin:6px 0 0; color:#d9e7ff; font-size:13px; }
+  .mobile-tabs { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:12px 0 8px; }
+  .mobile-tab { min-height:64px; border:2px solid white; border-radius:19px; color:white; font-weight:900; font-size:18px; line-height:1.05; padding:8px; cursor:pointer; }
+  .mobile-tab.active { outline:4px solid rgba(255,230,109,.95); outline-offset:1px; }
+  .mobile-help { text-align:center; color:#d9e7ff; font-size:15px; padding:42px 18px; line-height:1.5; }
+  .mobile-visual { position:relative; width:100%; margin:4px auto 0; }
+  .mobile-network-svg { width:100%; height:auto; display:block; overflow:visible; }
+  .mobile-link { stroke:rgba(255,255,255,.72); stroke-width:2; }
+  .mobile-hub-label { fill:white; font-weight:900; text-anchor:middle; dominant-baseline:middle; font-size:23px; pointer-events:none; }
+  .mobile-org-label { fill:white; font-weight:800; dominant-baseline:middle; font-size:13px; paint-order:stroke; stroke:#031630; stroke-width:4px; stroke-linejoin:round; pointer-events:none; }
+  .mobile-org-node { cursor:pointer; }
+  .mobile-org-node circle { stroke:white; stroke-width:3; }
+  .mobile-org-node.selected circle { stroke:#ffe66d; stroke-width:6; }
+  .mobile-detail { position:relative; background:rgba(10,36,72,.98); border:1px solid rgba(255,255,255,.38); border-radius:14px; padding:13px 40px 13px 14px; margin:8px 4px 4px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
+  .mobile-detail h3 { margin:0 0 8px; font-size:19px; }
+  .mobile-detail-grid { display:grid; grid-template-columns:96px 1fr; gap:5px 8px; font-size:13px; line-height:1.3; }
   .mobile-detail-grid b { color:var(--muted); }
-  .mobile-org-list { display:flex; flex-direction:column; gap:8px; }
-  .mobile-org-row { width:100%; display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:10px; border:1px solid rgba(255,255,255,.24); border-radius:14px; padding:10px 12px; background:rgba(7,29,58,.94); color:white; text-align:left; cursor:pointer; }
-  .mobile-org-row:active, .mobile-org-row.selected { border-color:#ffe66d; box-shadow:0 0 0 2px rgba(255,230,109,.25); }
-  .mobile-dot { width:34px; height:34px; border-radius:50%; border:2px solid white; }
-  .mobile-name { font-weight:800; font-size:15px; overflow-wrap:anywhere; }
-  .mobile-engagement { min-width:34px; padding:5px 8px; border-radius:999px; background:rgba(255,255,255,.13); font-weight:800; text-align:center; font-size:12px; }
-  .mobile-help { text-align:center; color:#d9e7ff; font-size:13px; padding:35px 15px; }
   #panelTitle { display:none; }
-  .card { margin:0 0 7px; padding:12px 38px 12px 14px; border-radius:13px; }
-  .card h3 { font-size:18px; margin-bottom:7px; }
-  .label { font-size:11px; margin-top:6px; }
-  .value { font-size:13px; }
-  .empty { display:none; }
-  #tooltip { max-width:235px; min-width:170px; font-size:12px; }
+  #tooltip { display:none !important; }
 }
 </style>
 </head>
@@ -187,15 +199,20 @@ function text(x,y,value,cls,size,anchor='middle') { const t=make('text',{x,y,'cl
 function categoryData(cat) { return DATA.filter(d=>d.type===cat).sort((a,b)=>b.engagement-a.engagement || a.name.localeCompare(b.name)); }
 
 function layout() {
+  if (isMobile()) {
+    svg.style.display='none';
+    renderMobileApp();
+    return;
+  }
+  svg.style.display='block';
+  mobileContent.innerHTML='';
   const w = wrap.clientWidth, h = wrap.clientHeight;
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   while (svg.firstChild) svg.removeChild(svg.firstChild);
-  const mobile = isMobile();
-  const titleY = mobile ? 28 : 42;
-  svg.appendChild(text(w/2,titleY,'2025–2026 AUiX Network Map','title',mobile?22:34));
-  svg.appendChild(text(w/2,titleY+(mobile?20:24), mobile ? 'Tap a category, then tap an organization.' : 'Click a category to open it. Hover for details. Click organizations to pin cards.','subtitle',mobile?10:12));
-
-  if (mobile) drawMobile(w,h); else drawDesktop(w,h);
+  const titleY = 42;
+  svg.appendChild(text(w/2,titleY,'2025–2026 AUiX Network Map','title',34));
+  svg.appendChild(text(w/2,titleY+24,'Click a category to open it. Hover for details. Click organizations to pin cards.','subtitle',12));
+  drawDesktop(w,h);
   renderCards();
 }
 
@@ -232,7 +249,7 @@ function drawHub(x,y,r,color,label,type,cat=null) {
     if(type==='center'){ expanded=null; layout(); return; }
     expanded = expanded===cat ? null : cat; layout();
   });
-  g.addEventListener('mouseenter',e=>showTip(e, {name:cat||'AUiX', type:cat||'Center', engagement:'', relationship:type==='category'?(expanded===cat?'Click to hide organizations':'Click to show organizations'):'Click to collapse map', expertise:''}));
+  g.addEventListener('mouseenter',e=>showTip(e, {name:cat||'AUiX', type:cat||'Center', engagement:'', summary:type==='category'?(expanded===cat?'Click to hide organizations':'Click to show organizations'):'Click to collapse map', expertise:''}));
   g.addEventListener('mouseleave',hideTip);
   svg.appendChild(g);
 }
@@ -268,58 +285,140 @@ function drawOrganizationsDesktop(cat,hx,hy,w,h) {
   });
 }
 
-function drawMobile(w,h) {
+function setStreamlitHeight() {
+  if (!isMobile()) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const contentHeight = Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight,
+        mobileContent.scrollHeight
+      ) + 24;
+      window.parent.postMessage({
+        isStreamlitMessage: true,
+        type: 'streamlit:setFrameHeight',
+        height: contentHeight
+      }, '*');
+    });
+  });
+}
+
+function renderMobileApp() {
   mobileContent.innerHTML='';
-  const top=78, margin=12, gap=8;
-  const tabW=(w-margin*2-gap)/2, tabH=54;
-  categories.forEach((cat,i)=>{
-    const col=i%2,row=Math.floor(i/2),x=margin+col*(tabW+gap),y=top+row*(tabH+gap);
-    const g=make('g',{'class':'node'});
-    g.appendChild(make('rect',{x,y,width:tabW,height:tabH,rx:18,fill:STYLES[cat].color,stroke:'white','stroke-width':expanded===cat?4:1.8}));
-    g.appendChild(text(x+tabW/2,y+tabH/2+1,STYLES[cat].label,'catText',cat==='Air University'?15:16));
-    g.addEventListener('click',()=>{
+
+  const header=document.createElement('div');
+  header.className='mobile-header';
+  header.innerHTML='<h1>2025–2026 AUiX Network Map</h1><p>Select a category to explore its organizations.</p>';
+  mobileContent.appendChild(header);
+
+  const tabs=document.createElement('div');
+  tabs.className='mobile-tabs';
+  categories.forEach(cat=>{
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='mobile-tab'+(expanded===cat?' active':'');
+    btn.style.background=STYLES[cat].color;
+    btn.innerHTML=STYLES[cat].label==='AIR UNIVERSITY'?'AIR<br>UNIVERSITY':esc(STYLES[cat].label);
+    btn.addEventListener('click',()=>{
       expanded=expanded===cat?null:cat;
       mobileSelected=null;
-      layout();
+      renderMobileApp();
+      window.scrollTo({top:0,behavior:'smooth'});
     });
-    svg.appendChild(g);
+    tabs.appendChild(btn);
   });
+  mobileContent.appendChild(tabs);
 
   if(!expanded){
-    mobileContent.innerHTML='<div class="mobile-help"><b>Choose a category above</b><br><br>Organizations will appear as a clear list with the bubble directly beside each name.</div>';
+    const help=document.createElement('div');
+    help.className='mobile-help';
+    help.innerHTML='<b>Choose a category above.</b><br>The organizations will appear only after you make a selection.';
+    mobileContent.appendChild(help);
+    setStreamlitHeight();
     return;
   }
 
+  if(mobileSelected) renderMobileDetail(mobileSelected);
+
   const items=categoryData(expanded);
-  const title=document.createElement('div');
-  title.className='mobile-category-title';
-  title.textContent=STYLES[expanded].label;
-  mobileContent.appendChild(title);
+  const n=items.length;
+  const visual=document.createElement('div');
+  visual.className='mobile-visual';
+  const NS='http://www.w3.org/2000/svg';
+  const graph=document.createElementNS(NS,'svg');
+  graph.setAttribute('class','mobile-network-svg');
+  graph.setAttribute('viewBox','0 0 400 620');
+  graph.setAttribute('role','img');
+  graph.setAttribute('aria-label',`${STYLES[expanded].label} organizations`);
 
-  if(mobileSelected){ renderMobileDetail(mobileSelected); }
+  const cx=200, cy=235, hubR=83;
+  const hub=document.createElementNS(NS,'circle');
+  hub.setAttribute('cx',cx); hub.setAttribute('cy',cy); hub.setAttribute('r',hubR);
+  hub.setAttribute('fill',STYLES[expanded].color); hub.setAttribute('stroke','white'); hub.setAttribute('stroke-width','3');
+  graph.appendChild(hub);
 
-  const list=document.createElement('div');
-  list.className='mobile-org-list';
-  items.forEach(d=>{
-    const row=document.createElement('button');
-    row.type='button';
-    row.className='mobile-org-row'+(mobileSelected && mobileSelected.name===d.name?' selected':'');
-    row.innerHTML=`<span class="mobile-dot" style="background:${esc(STYLES[d.type].color)}"></span><span class="mobile-name">${esc(d.name)}</span><span class="mobile-engagement">${esc(Number(d.engagement).toLocaleString())}</span>`;
-    row.addEventListener('click',()=>{
-      mobileSelected=d;
-      drawMobile(wrap.clientWidth,wrap.clientHeight);
-      mobileContent.scrollTop=0;
-    });
-    list.appendChild(row);
+  const hubText=document.createElementNS(NS,'text');
+  hubText.setAttribute('x',cx); hubText.setAttribute('y',cy); hubText.setAttribute('class','mobile-hub-label');
+  if(STYLES[expanded].label==='AIR UNIVERSITY' || STYLES[expanded].label==='MIL & GOV'){
+    const first=document.createElementNS(NS,'tspan'); first.setAttribute('x',cx); first.setAttribute('dy','-12'); first.textContent=expanded==='Air University'?'AIR':'MIL &';
+    const second=document.createElementNS(NS,'tspan'); second.setAttribute('x',cx); second.setAttribute('dy','27'); second.textContent=expanded==='Air University'?'UNIVERSITY':'GOV';
+    hubText.appendChild(first); hubText.appendChild(second);
+  } else hubText.textContent=STYLES[expanded].label;
+  graph.appendChild(hubText);
+
+  const max=Math.max(...items.map(d=>d.engagement),1);
+  const outerCount=Math.min(n,10);
+  items.forEach((d,i)=>{
+    let a, radiusX, radiusY;
+    if(n<=10){
+      a=-Math.PI/2 + i*(Math.PI*2/n);
+      radiusX=142; radiusY=155;
+    } else if(i<outerCount){
+      a=-Math.PI/2 + i*(Math.PI*2/outerCount);
+      radiusX=145; radiusY=160;
+    } else {
+      const innerN=n-outerCount;
+      a=-Math.PI/2 + (i-outerCount)*(Math.PI*2/innerN) + Math.PI/innerN;
+      radiusX=112; radiusY=118;
+    }
+    const x=cx+radiusX*Math.cos(a), y=cy+radiusY*Math.sin(a);
+    const r=21+10*Math.sqrt(d.engagement/max);
+    const link=document.createElementNS(NS,'line');
+    link.setAttribute('x1',cx); link.setAttribute('y1',cy); link.setAttribute('x2',x); link.setAttribute('y2',y); link.setAttribute('class','mobile-link');
+    graph.insertBefore(link,hub);
+
+    const g=document.createElementNS(NS,'g');
+    g.setAttribute('class','mobile-org-node'+(mobileSelected && mobileSelected.name===d.name?' selected':''));
+    const c=document.createElementNS(NS,'circle'); c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r',r); c.setAttribute('fill',STYLES[d.type].color);
+    g.appendChild(c);
+
+    const label=document.createElementNS(NS,'text');
+    const onRight=x>=cx;
+    let tx=onRight?x+r+7:x-r-7;
+    let anchor=onRight?'start':'end';
+    // Keep long names readable and inside the viewBox.
+    if(onRight && tx>326){ tx=x-r-7; anchor='end'; }
+    if(!onRight && tx<74){ tx=x+r+7; anchor='start'; }
+    label.setAttribute('x',tx); label.setAttribute('y',y); label.setAttribute('text-anchor',anchor); label.setAttribute('class','mobile-org-label');
+    const words=String(d.name).split(' ');
+    const lines=[]; let current='';
+    words.forEach(word=>{ const next=(current+' '+word).trim(); if(next.length>18 && current){ lines.push(current); current=word; } else current=next; });
+    if(current) lines.push(current);
+    lines.slice(0,2).forEach((part,j)=>{ const sp=document.createElementNS(NS,'tspan'); sp.setAttribute('x',tx); sp.setAttribute('dy',j===0?(lines.length>1?'-7':'0'):'15'); sp.textContent=part; label.appendChild(sp); });
+    g.appendChild(label);
+    g.addEventListener('click',()=>{ mobileSelected=d; renderMobileApp(); window.scrollTo({top:0,behavior:'smooth'}); });
+    graph.appendChild(g);
   });
-  mobileContent.appendChild(list);
-}
 
+  visual.appendChild(graph);
+  mobileContent.appendChild(visual);
+  setStreamlitHeight();
+}
 function renderMobileDetail(d){
   const detail=document.createElement('div');
   detail.className='mobile-detail';
-  detail.innerHTML=`<button class="close" aria-label="Close details">×</button><h3>${esc(d.name)}</h3><div class="mobile-detail-grid"><b>Category</b><span>${esc(d.type)}</span><b>Engagements</b><span>${esc(Number(d.engagement).toLocaleString())}</span><b>Relationship</b><span>${esc(d.relationship)}</span><b>Expertise</b><span>${esc(d.expertise)}</span></div>`;
-  detail.querySelector('.close').addEventListener('click',()=>{mobileSelected=null; drawMobile(wrap.clientWidth,wrap.clientHeight);});
+  detail.innerHTML=`<button class="close" aria-label="Close details">×</button><h3>${esc(d.name)}</h3><div class="mobile-detail-grid"><b>Category</b><span>${esc(d.type)}</span><b>Engagements</b><span>${esc(Number(d.engagement).toLocaleString())}</span><b>Engagement Summary</b><span>${esc(d.summary)}</span><b>Expertise Areas</b><span>${esc(d.expertise)}</span></div>`;
+  detail.querySelector('.close').addEventListener('click',()=>{mobileSelected=null; renderMobileApp();});
   mobileContent.appendChild(detail);
 }
 
@@ -343,13 +442,13 @@ function drawOrg(d,x,y,r,a,w,h,mobile=false){
   svg.appendChild(g);
 }
 
-function tipHtml(d){ return `<b>${esc(d.name)}</b><br>Category: ${esc(d.type)}${d.engagement!==''?`<br>Engagements: ${esc(Number(d.engagement).toLocaleString())}`:''}<br>Relationship: ${esc(d.relationship)}${d.expertise?`<br>Expertise: ${esc(d.expertise)}`:''}`; }
+function tipHtml(d){ return `<b>${esc(d.name)}</b><br>Category: ${esc(d.type)}${d.engagement!==''?`<br>Engagements: ${esc(Number(d.engagement).toLocaleString())}`:''}<br>Engagement Summary: ${esc(d.summary)}${d.expertise?`<br>Expertise Areas: ${esc(d.expertise)}`:''}`; }
 function showTip(e,d){ tooltip.innerHTML=tipHtml(d); tooltip.style.opacity='1'; moveTip(e); }
 function moveTip(e){ const r=wrap.getBoundingClientRect(); tooltip.style.left=(e.clientX-r.left)+'px'; tooltip.style.top=(e.clientY-r.top)+'px'; }
 function showTipAtNode(g,d){ const c=g.querySelector('circle'); if(!c)return; const p=svg.createSVGPoint(); p.x=parseFloat(c.getAttribute('cx')); p.y=parseFloat(c.getAttribute('cy')); const sp=p.matrixTransform(svg.getScreenCTM()); const r=wrap.getBoundingClientRect(); tooltip.innerHTML=tipHtml(d); tooltip.style.left=(sp.x-r.left)+'px'; tooltip.style.top=(sp.y-r.top)+'px'; tooltip.style.opacity='1'; }
 function hideTip(){ tooltip.style.opacity='0'; }
 
-function pin(d){ if(isMobile()){ mobileSelected=d; drawMobile(wrap.clientWidth,wrap.clientHeight); mobileContent.scrollTop=0; return; } if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
+function pin(d){ if(isMobile()){ mobileSelected=d; renderMobileApp(); window.scrollTo({top:0, behavior:'smooth'}); return; } if(!pinned.some(p=>p.name===d.name)){ pinned.push(d); if(pinned.length>4)pinned.shift(); } renderCards(); updateSelection(); }
 function closePin(name){ pinned=pinned.filter(p=>p.name!==name); renderCards(); updateSelection(); }
 function updateSelection(){ document.querySelectorAll('.orgNode').forEach(g=>g.classList.toggle('selected',pinned.some(p=>p.name===g.dataset.name))); }
 function renderCards(){
@@ -359,7 +458,7 @@ function renderCards(){
   panel.classList.add('hasCards');
   pinned.forEach(d=>{
     const card=document.createElement('div'); card.className='card';
-    card.innerHTML=`<button class="close" aria-label="Close ${esc(d.name)}">×</button><h3>${esc(d.name)}</h3><div class="label">Category</div><div class="value">${esc(d.type)}</div><div class="label">Engagements</div><div class="value">${esc(Number(d.engagement).toLocaleString())}</div><div class="label">Relationship</div><div class="value">${esc(d.relationship)}</div><div class="label">Expertise</div><div class="value">${esc(d.expertise)}</div>`;
+    card.innerHTML=`<button class="close" aria-label="Close ${esc(d.name)}">×</button><h3>${esc(d.name)}</h3><div class="label">Category</div><div class="value">${esc(d.type)}</div><div class="label">Engagements</div><div class="value">${esc(Number(d.engagement).toLocaleString())}</div><div class="label">Engagement Summary</div><div class="value">${esc(d.summary)}</div><div class="label">Expertise Areas</div><div class="value">${esc(d.expertise)}</div>`;
     card.querySelector('.close').addEventListener('click',()=>closePin(d.name)); cards.appendChild(card);
   });
 }
@@ -370,4 +469,4 @@ layout();
 </body>
 </html>'''.replace('__DATA__', payload).replace('__STYLES__', styles_payload)
 
-components.html(html, height=980, scrolling=False)
+components.html(html, height=1050, scrolling=True)
