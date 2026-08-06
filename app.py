@@ -32,8 +32,9 @@ def normalize_category(value: object) -> str:
 
 
 @st.cache_data(show_spinner=False)
-def load_data() -> pd.DataFrame:
-    data = pd.read_excel(DATA_FILE)
+def load_data(file_path: str, file_mtime_ns: int, file_size: int) -> pd.DataFrame:
+    # Timestamp and size are cache keys, so replacing the spreadsheet reloads the data.
+    data = pd.read_excel(file_path)
     data.columns = [str(column).strip().lower() for column in data.columns]
 
     aliases = {
@@ -79,7 +80,8 @@ iframe { display:block; width:100%; border:0; }
 )
 
 try:
-    df = load_data()
+    stat = DATA_FILE.stat()
+    df = load_data(str(DATA_FILE), stat.st_mtime_ns, stat.st_size)
 except Exception as exc:
     st.error(f"The spreadsheet could not be loaded: {exc}")
     st.stop()
