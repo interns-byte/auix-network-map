@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import base64
 from pathlib import Path
 
 import pandas as pd
@@ -10,6 +11,8 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="AUiX Network Map", layout="wide", initial_sidebar_state="collapsed")
 
 DATA_FILE = Path(__file__).with_name("Streamlit.xlsx")
+AUIX_LOGO_FILE = Path(__file__).with_name("auix_logo.png")
+DRADIS_LOGO_FILE = Path(__file__).with_name("dradis_logo.png")
 
 CATEGORY_STYLE = {
     "Air University": {"color": "#e32119", "label": "AIR UNIVERSITY"},
@@ -33,7 +36,6 @@ def normalize_category(value: object) -> str:
 
 @st.cache_data(show_spinner=False)
 def load_data(file_path: str, file_mtime_ns: int, file_size: int) -> pd.DataFrame:
-    # Timestamp and size are cache keys, so replacing the spreadsheet reloads the data.
     data = pd.read_excel(file_path)
     data.columns = [str(column).strip().lower() for column in data.columns]
 
@@ -101,6 +103,13 @@ for row in df.to_dict(orient="records"):
 payload = json.dumps(records, ensure_ascii=False).replace("</", "<\\/")
 styles_payload = json.dumps(CATEGORY_STYLE, ensure_ascii=False).replace("</", "<\\/")
 
+def image_data_uri(path: Path) -> str:
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+auix_logo_uri = image_data_uri(AUIX_LOGO_FILE)
+dradis_logo_uri = image_data_uri(DRADIS_LOGO_FILE)
+
 html = r'''<!doctype html>
 <html>
 <head>
@@ -112,6 +121,11 @@ html = r'''<!doctype html>
 html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden; background:var(--bg); color:white; font-family:Arial, Helvetica, sans-serif; }
 #app { width:100vw; height:100vh; height:100dvh; display:grid; grid-template-columns:minmax(0, 1fr) 340px; background:radial-gradient(circle at 42% 42%, #0b2a52 0%, #031630 62%, #020d1f 100%); }
 #mapWrap { min-width:0; height:100vh; height:100dvh; position:relative; overflow:hidden; }
+#brandBar { position:absolute; z-index:12; top:8px; left:50%; transform:translateX(-50%); display:flex; align-items:center; justify-content:center; gap:16px; height:58px; pointer-events:none; }
+#brandBar img { display:block; object-fit:contain; max-height:54px; width:auto; }
+#brandBar .auixLogo { max-width:92px; }
+#brandBar .dradisLogo { max-width:68px; }
+#viewNote { position:absolute; z-index:12; top:118px; left:50%; transform:translateX(-50%); color:#cbdcf6; font-size:12px; font-weight:700; letter-spacing:.02em; white-space:nowrap; pointer-events:none; }
 #map { width:100%; height:100%; display:block; }
 #panel { height:100vh; height:100dvh; overflow-y:auto; padding:88px 18px 18px; border-left:1px solid rgba(255,255,255,.18); background:rgba(2,13,31,.78); }
 #panelTitle { position:absolute; top:22px; right:18px; width:304px; color:#d8e8ff; font-weight:800; font-size:14px; letter-spacing:.02em; }
@@ -142,6 +156,13 @@ html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden
   #map { display:none !important; }
   #panel { display:none !important; }
   #mobileContent { display:block; position:relative; width:100%; height:auto; min-height:100vh; overflow:visible; margin:0; padding:calc(14px + env(safe-area-inset-top)) 10px calc(100px + env(safe-area-inset-bottom)); touch-action:pan-y; background:radial-gradient(circle at 50% 24%, #0b2a52 0%, #031630 68%, #020d1f 100%); }
+  #brandBar { display:none; }
+  #viewNote { display:none; }
+  .mobile-brand { display:flex; align-items:center; justify-content:center; gap:12px; margin:0 0 8px; }
+  .mobile-brand img { height:42px; width:auto; object-fit:contain; }
+  .mobile-brand .auixLogo { max-width:78px; }
+  .mobile-brand .dradisLogo { max-width:58px; }
+  .mobile-device-note { text-align:center; color:#cbdcf6; font-size:11px; font-weight:700; margin:5px 0 8px; }
   .mobile-header { text-align:center; margin:0 0 6px; }
   .mobile-header h1 { margin:0; font-size:27px; line-height:1.08; font-weight:900; }
   .mobile-header p { display:none; }
@@ -169,6 +190,8 @@ html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden
 <body>
 <div id="app">
   <div id="mapWrap">
+    <div id="brandBar"><img class="auixLogo" src="__AUIX_LOGO__" alt="AUiX logo"><img class="dradisLogo" src="__DRADIS_LOGO__" alt="DRADIS logo"></div>
+    <div id="viewNote">Best viewed on desktop or tablet.</div>
     <svg id="map" role="img" aria-label="Interactive AUiX network map"></svg>
     <div id="tooltip"></div>
     <div id="mobileContent"></div>
@@ -211,7 +234,7 @@ function layout() {
   const w = wrap.clientWidth, h = wrap.clientHeight;
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   while (svg.firstChild) svg.removeChild(svg.firstChild);
-  const titleY = 42;
+  const titleY = 92;
   svg.appendChild(text(w/2,titleY,'2025–2026 AUiX Network Map','title',34));
   svg.appendChild(text(w/2,titleY+24,'Click a category to open it. Hover for details. Click organizations to pin cards.','subtitle',12));
   drawDesktop(w,h);
@@ -220,7 +243,7 @@ function layout() {
 
 function drawDesktop(w,h) {
   const panelSafe = 0;
-  const cx=w*0.50, cy=h*0.54;
+  const cx=w*0.50, cy=h*0.57;
   const xGap=Math.min(w*0.31, 390), yGap=Math.min(h*0.29, 250);
   const pos={
     'Air University':[cx-xGap,cy-yGap], 'Academia':[cx+xGap,cy-yGap],
@@ -313,8 +336,13 @@ function renderMobileApp() {
   mobileContent.innerHTML='';
 
   const header=document.createElement('div');
+  const mobileBrand=document.createElement('div');
+  mobileBrand.className='mobile-brand';
+  mobileBrand.innerHTML='<img class="auixLogo" src="__AUIX_LOGO__" alt="AUiX logo"><img class="dradisLogo" src="__DRADIS_LOGO__" alt="DRADIS logo">';
+  mobileContent.appendChild(mobileBrand);
+
   header.className='mobile-header';
-  header.innerHTML='<h1>2025–2026 AUiX Network Map</h1>'; 
+  header.innerHTML='<h1>2025–2026 AUiX Network Map</h1><div class="mobile-device-note">Best viewed on desktop or tablet.</div>'; 
   mobileContent.appendChild(header);
 
   const tabs=document.createElement('div');
@@ -482,6 +510,6 @@ let resizeTimer; window.addEventListener('resize',()=>{clearTimeout(resizeTimer)
 layout();
 </script>
 </body>
-</html>'''.replace('__DATA__', payload).replace('__STYLES__', styles_payload)
+</html>'''.replace('__DATA__', payload).replace('__STYLES__', styles_payload).replace('__AUIX_LOGO__', auix_logo_uri).replace('__DRADIS_LOGO__', dradis_logo_uri)
 
 components.html(html, height=1050, scrolling=True)
