@@ -190,7 +190,7 @@ html, body { margin:0; width:100%; height:100%; min-height:100%; overflow:hidden
 <body>
 <div id="app">
   <div id="mapWrap">
-    <div id="brandBar"><img class="auixLogo" src="__AUIX_LOGO__" alt="AUiX logo"><img class="dradisLogo" src="__DRADIS_LOGO__" alt="DRADIS logo"></div>
+    <div id="brandBar"><img id="auixBrandLogo" class="auixLogo" src="__AUIX_LOGO__" alt="AUiX logo"><img id="dradisBrandLogo" class="dradisLogo" src="__DRADIS_LOGO__" alt="DRADIS logo"></div>
     <div id="viewNote">Best viewed on desktop or tablet.</div>
     <svg id="map" role="img" aria-label="Interactive AUiX network map"></svg>
     <div id="tooltip"></div>
@@ -338,7 +338,12 @@ function renderMobileApp() {
   const header=document.createElement('div');
   const mobileBrand=document.createElement('div');
   mobileBrand.className='mobile-brand';
-  mobileBrand.innerHTML='<img class="auixLogo" src="__AUIX_LOGO__" alt="AUiX logo"><img class="dradisLogo" src="__DRADIS_LOGO__" alt="DRADIS logo">';
+  const auixMobileLogo = document.getElementById('auixBrandLogo').cloneNode(true);
+  const dradisMobileLogo = document.getElementById('dradisBrandLogo').cloneNode(true);
+  auixMobileLogo.removeAttribute('id');
+  dradisMobileLogo.removeAttribute('id');
+  mobileBrand.appendChild(auixMobileLogo);
+  mobileBrand.appendChild(dradisMobileLogo);
   mobileContent.appendChild(mobileBrand);
 
   header.className='mobile-header';
